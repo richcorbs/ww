@@ -40,7 +40,7 @@ create_test_repo() {
 
   # Initialize git
   cd "$repo_path" || return 1
-  git init
+  git init > /dev/null 2>&1
   git config user.name "Test User"
   git config user.email "test@example.com"
 
@@ -51,8 +51,8 @@ create_test_repo() {
   echo "class PostsController; end" > app/controllers/posts_controller.rb
   echo "class AuthService; end" > app/services/auth_service.rb
 
-  git add -A
-  git commit -m "Initial commit"
+  git add -A > /dev/null 2>&1
+  git commit -m "Initial commit" > /dev/null 2>&1
 
   echo "$repo_path"
 }
@@ -62,14 +62,14 @@ assert_success() {
   local command="$1"
   local description="${2:-$command}"
 
-  ((TEST_COUNT++))
+  TEST_COUNT=$((TEST_COUNT + 1))
 
   if eval "$command" > /dev/null 2>&1; then
-    ((TEST_PASSED++))
+    TEST_PASSED=$((TEST_PASSED + 1))
     echo -e "${TEST_GREEN}✓${TEST_NC} $description"
     return 0
   else
-    ((TEST_FAILED++))
+    TEST_FAILED=$((TEST_FAILED + 1))
     echo -e "${TEST_RED}✗${TEST_NC} $description"
     echo -e "  ${TEST_YELLOW}Command failed: $command${TEST_NC}"
     return 1
@@ -81,15 +81,15 @@ assert_failure() {
   local command="$1"
   local description="${2:-$command}"
 
-  ((TEST_COUNT++))
+  TEST_COUNT=$((TEST_COUNT + 1))
 
   if eval "$command" > /dev/null 2>&1; then
-    ((TEST_FAILED++))
+    TEST_FAILED=$((TEST_FAILED + 1))
     echo -e "${TEST_RED}✗${TEST_NC} $description"
     echo -e "  ${TEST_YELLOW}Command should have failed but succeeded: $command${TEST_NC}"
     return 1
   else
-    ((TEST_PASSED++))
+    TEST_PASSED=$((TEST_PASSED + 1))
     echo -e "${TEST_GREEN}✓${TEST_NC} $description"
     return 0
   fi
@@ -100,14 +100,14 @@ assert_file_exists() {
   local file_path="$1"
   local description="${2:-File $file_path should exist}"
 
-  ((TEST_COUNT++))
+  TEST_COUNT=$((TEST_COUNT + 1))
 
   if [[ -f "$file_path" ]] || [[ -d "$file_path" ]]; then
-    ((TEST_PASSED++))
+    TEST_PASSED=$((TEST_PASSED + 1))
     echo -e "${TEST_GREEN}✓${TEST_NC} $description"
     return 0
   else
-    ((TEST_FAILED++))
+    TEST_FAILED=$((TEST_FAILED + 1))
     echo -e "${TEST_RED}✗${TEST_NC} $description"
     echo -e "  ${TEST_YELLOW}File/directory does not exist: $file_path${TEST_NC}"
     return 1
@@ -119,14 +119,14 @@ assert_file_not_exists() {
   local file_path="$1"
   local description="${2:-File $file_path should not exist}"
 
-  ((TEST_COUNT++))
+  TEST_COUNT=$((TEST_COUNT + 1))
 
   if [[ ! -f "$file_path" ]] && [[ ! -d "$file_path" ]]; then
-    ((TEST_PASSED++))
+    TEST_PASSED=$((TEST_PASSED + 1))
     echo -e "${TEST_GREEN}✓${TEST_NC} $description"
     return 0
   else
-    ((TEST_FAILED++))
+    TEST_FAILED=$((TEST_FAILED + 1))
     echo -e "${TEST_RED}✗${TEST_NC} $description"
     echo -e "  ${TEST_YELLOW}File/directory exists but shouldn't: $file_path${TEST_NC}"
     return 1
@@ -139,14 +139,14 @@ assert_contains() {
   local substring="$2"
   local description="${3:-String should contain '$substring'}"
 
-  ((TEST_COUNT++))
+  TEST_COUNT=$((TEST_COUNT + 1))
 
   if [[ "$string" == *"$substring"* ]]; then
-    ((TEST_PASSED++))
+    TEST_PASSED=$((TEST_PASSED + 1))
     echo -e "${TEST_GREEN}✓${TEST_NC} $description"
     return 0
   else
-    ((TEST_FAILED++))
+    TEST_FAILED=$((TEST_FAILED + 1))
     echo -e "${TEST_RED}✗${TEST_NC} $description"
     echo -e "  ${TEST_YELLOW}Expected substring not found${TEST_NC}"
     echo -e "  String: $string"
@@ -160,14 +160,14 @@ assert_branch_exists() {
   local branch_name="$1"
   local description="${2:-Branch $branch_name should exist}"
 
-  ((TEST_COUNT++))
+  TEST_COUNT=$((TEST_COUNT + 1))
 
   if git show-ref --verify --quiet "refs/heads/${branch_name}"; then
-    ((TEST_PASSED++))
+    TEST_PASSED=$((TEST_PASSED + 1))
     echo -e "${TEST_GREEN}✓${TEST_NC} $description"
     return 0
   else
-    ((TEST_FAILED++))
+    TEST_FAILED=$((TEST_FAILED + 1))
     echo -e "${TEST_RED}✗${TEST_NC} $description"
     return 1
   fi
@@ -178,17 +178,17 @@ assert_current_branch() {
   local expected_branch="$1"
   local description="${2:-Current branch should be $expected_branch}"
 
-  ((TEST_COUNT++))
+  TEST_COUNT=$((TEST_COUNT + 1))
 
   local current_branch
   current_branch=$(git branch --show-current)
 
   if [[ "$current_branch" == "$expected_branch" ]]; then
-    ((TEST_PASSED++))
+    TEST_PASSED=$((TEST_PASSED + 1))
     echo -e "${TEST_GREEN}✓${TEST_NC} $description"
     return 0
   else
-    ((TEST_FAILED++))
+    TEST_FAILED=$((TEST_FAILED + 1))
     echo -e "${TEST_RED}✗${TEST_NC} $description"
     echo -e "  ${TEST_YELLOW}Expected: $expected_branch, Got: $current_branch${TEST_NC}"
     return 1

@@ -71,19 +71,30 @@ cmd_init() {
 
   # Add to .gitignore
   local gitignore="${repo_root}/.gitignore"
+  local gitignore_updated=false
+
   if [[ -f "$gitignore" ]]; then
     if ! grep -q "^${WT_FLOW_DIR}/" "$gitignore" 2>/dev/null; then
       info "Adding ${WT_FLOW_DIR}/ to .gitignore..."
       echo "${WT_FLOW_DIR}/" >> "$gitignore"
+      gitignore_updated=true
     fi
     if ! grep -q "^\.worktrees/" "$gitignore" 2>/dev/null; then
       info "Adding .worktrees/ to .gitignore..."
       echo ".worktrees/" >> "$gitignore"
+      gitignore_updated=true
     fi
   else
     info "Creating .gitignore..."
     echo "${WT_FLOW_DIR}/" > "$gitignore"
     echo ".worktrees/" >> "$gitignore"
+    gitignore_updated=true
+  fi
+
+  # Commit .gitignore if it was created or updated
+  if [[ "$gitignore_updated" == "true" ]]; then
+    git add .gitignore
+    git commit -m "wt: Initialize workflow (add .gitignore entries)" > /dev/null 2>&1 || true
   fi
 
   success "Worktree workflow initialized successfully!"

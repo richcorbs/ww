@@ -1,6 +1,7 @@
 # Test directories
 test-repos/
 *.test-repo
+test-output.log
 
 # macOS
 .DS_Store
