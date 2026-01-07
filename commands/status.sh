@@ -182,19 +182,62 @@ cmd_status() {
         status_str=" - $(IFS=", "; echo "${status_parts[*]}")"
       fi
 
+      # Check if branch has been merged into main (check remote first, then local)
+      local is_merged=false
+      local main_branch="main"
+      local check_branch=""
+
+      # Prefer checking against origin/main if it exists
+      if git show-ref --verify --quiet refs/remotes/origin/main; then
+        check_branch="origin/main"
+        main_branch="main"
+      elif git show-ref --verify --quiet refs/remotes/origin/master; then
+        check_branch="origin/master"
+        main_branch="master"
+      elif git show-ref --verify --quiet refs/heads/main; then
+        check_branch="main"
+        main_branch="main"
+      elif git show-ref --verify --quiet refs/heads/master; then
+        check_branch="master"
+        main_branch="master"
+      fi
+
+      if [[ -n "$check_branch" ]] && git branch --merged "$check_branch" 2>/dev/null | grep -q "^[*+ ]*${branch}$"; then
+        is_merged=true
+      fi
+
       # Check for associated PR using GitHub CLI
       local pr_info=""
       if command -v gh > /dev/null 2>&1; then
-        # Query for PR associated with this branch
-        local pr_url
-        pr_url=$(gh pr list --head "$branch" --json url --jq '.[0].url' 2>/dev/null || echo "")
+        if [[ "$is_merged" == "true" ]]; then
+          # Check for merged PR
+          local pr_data
+          pr_data=$(gh pr list --head "$branch" --state merged --json number,url --jq '.[0]' 2>/dev/null || echo "")
 
-        if [[ -n "$pr_url" ]]; then
-          # Get PR number from URL
-          local pr_number
-          pr_number=$(echo "$pr_url" | grep -oE '[0-9]+$')
-          pr_info=" ${BLUE}PR #${pr_number}${NC}: ${pr_url}"
+          if [[ -n "$pr_data" ]] && [[ "$pr_data" != "null" ]]; then
+            local pr_number
+            pr_number=$(echo "$pr_data" | jq -r '.number')
+            local pr_url
+            pr_url=$(echo "$pr_data" | jq -r '.url')
+            pr_info=" ${GREEN}✓ Merged${NC} ${BLUE}PR #${pr_number}${NC}: ${pr_url}"
+          else
+            pr_info=" ${GREEN}✓ Merged into ${main_branch}${NC}"
+          fi
+        else
+          # Query for open PR associated with this branch
+          local pr_url
+          pr_url=$(gh pr list --head "$branch" --json url --jq '.[0].url' 2>/dev/null || echo "")
+
+          if [[ -n "$pr_url" ]]; then
+            # Get PR number from URL
+            local pr_number
+            pr_number=$(echo "$pr_url" | grep -oE '[0-9]+$')
+            pr_info=" ${BLUE}PR #${pr_number}${NC}: ${pr_url}"
+          fi
         fi
+      elif [[ "$is_merged" == "true" ]]; then
+        # No gh CLI, just show merged status
+        pr_info=" ${GREEN}✓ Merged into ${main_branch}${NC}"
       fi
 
       echo -e "    ${GREEN}${name}${NC} (${branch})${status_str}"
