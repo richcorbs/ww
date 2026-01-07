@@ -22,6 +22,7 @@ A GitButler-inspired workflow using native git worktrees, allowing you to work o
 - Git 2.5 or higher
 - jq (JSON processor)
 - Bash 4+
+- gh (GitHub CLI) - Optional, for PR links in status and `wt pr` command
 
 ### Install
 

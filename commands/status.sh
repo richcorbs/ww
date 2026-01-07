@@ -39,16 +39,7 @@ cmd_status() {
     echo ""
   fi
 
-  # Check if on worktree-staging branch
-  local current_branch
-  current_branch=$(git branch --show-current)
-  if [[ "$current_branch" != "worktree-staging" ]]; then
-    warn "Not on worktree-staging branch (currently on: ${current_branch})"
-    info "Use 'git checkout worktree-staging' to switch"
-    echo ""
-  fi
-
-  # Check if worktree-staging is behind main
+  # Check if worktree-staging is behind main (show first)
   if git remote get-url origin > /dev/null 2>&1; then
     # Determine main branch name
     local main_branch
@@ -61,11 +52,19 @@ cmd_status() {
       behind_count=$(git rev-list --count HEAD..origin/${main_branch} 2>/dev/null || echo "0")
 
       if [[ "$behind_count" -gt 0 ]]; then
-        warn "worktree-staging is ${behind_count} commit(s) behind origin/${main_branch}"
         info "Run 'wt sync' to merge latest changes from ${main_branch}"
         echo ""
       fi
     fi
+  fi
+
+  # Check if on worktree-staging branch
+  local current_branch
+  current_branch=$(git branch --show-current)
+  if [[ "$current_branch" != "worktree-staging" ]]; then
+    warn "Not on worktree-staging branch (currently on: ${current_branch})"
+    info "Use 'git checkout worktree-staging' to switch"
+    echo ""
   fi
 
   # Get uncommitted changes
@@ -205,8 +204,37 @@ cmd_status() {
 
       # Show uncommitted files if any
       if [[ ${#uncommitted_files[@]} -gt 0 ]]; then
+        # Generate display-only abbreviations for worktree files (sequential to avoid conflicts)
+        declare -A temp_abbrevs
+        local used_abbrevs=()
+
+        # Get current unassigned file abbreviations to avoid conflicts
+        local unassigned_abbrevs
+        unassigned_abbrevs=$(read_abbreviations 2>/dev/null | jq -r '.[]' 2>/dev/null || echo "")
+
         for file_status in "${uncommitted_files[@]}"; do
-          echo -e "    ${file_status}"
+          local filepath="${file_status:3}"
+
+          # Generate abbreviation based on filepath
+          local abbrev
+          abbrev=$(hash_filepath "$filepath")
+          abbrev=$(hash_to_letters "$abbrev")
+
+          # Check for collisions and find next available
+          while [[ " ${used_abbrevs[@]} " =~ " ${abbrev} " ]] || echo "$unassigned_abbrevs" | grep -q "^${abbrev}$"; do
+            abbrev=$(find_next_abbrev "$abbrev")
+          done
+
+          temp_abbrevs["$filepath"]="$abbrev"
+          used_abbrevs+=("$abbrev")
+        done
+
+        # Display with abbreviations
+        for file_status in "${uncommitted_files[@]}"; do
+          local status_code="${file_status:0:2}"
+          local filepath="${file_status:3}"
+          local abbrev="${temp_abbrevs[$filepath]}"
+          echo -e "    ${YELLOW}${abbrev}${NC}  ${status_code} ${filepath}"
         done
       fi
 

@@ -65,6 +65,10 @@ cmd_sync() {
   if git remote get-url origin > /dev/null 2>&1; then
     info "Fetching latest changes from origin..."
     git fetch origin 2>&1 || warn "Failed to fetch from origin"
+
+    # Update local source branch from origin
+    info "Updating local ${source_branch} from origin/${source_branch}..."
+    git fetch origin "${source_branch}:${source_branch}" 2>&1 || warn "Failed to update local ${source_branch}"
   fi
 
   # Merge source branch into worktree-staging
