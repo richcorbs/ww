@@ -81,7 +81,7 @@ cmd_sync() {
   fi
 
   # Merge source branch into worktree-staging
-  if git merge "${source_branch}" 2>&1; then
+  if git merge --no-edit "${source_branch}" 2>&1; then
     success "Successfully synced worktree-staging with '${source_branch}'"
 
     # Show summary
