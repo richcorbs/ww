@@ -11,6 +11,7 @@ A GitButler-inspired workflow using native git worktrees, allowing you to work o
 - **Commit tracking**: Track which commits have been applied between branches
 - **Safe operations**: Work in isolation without affecting your main branch
 - **Simple CLI**: Single `wt` command with intuitive subcommands
+- **Abbreviated commands**: Use short forms like `wt as` for `wt assign`, `wt ap` for `wt apply`
 
 ## Installation
 
@@ -387,6 +388,7 @@ wt sync
 4. **Sync regularly** after merging features to main: `wt sync`
 5. **Use `wt unassign`** to correct assignment mistakes
 6. **Commit small, logical changes** in worktrees for clearer history
+7. **Use abbreviated commands** for speed: `wt as` (assign), `wt ap` (apply), `wt st` (status), `wt cr` (create)
 
 ## Troubleshooting
 

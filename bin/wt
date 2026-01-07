@@ -41,6 +41,43 @@ Run 'wt <command> --help' for more information on a command.
 EOF
 }
 
+# Find command by abbreviation
+find_command() {
+  local abbrev="$1"
+  local found_command=""
+  local match_count=0
+
+  # Get all available commands
+  for cmd_file in "${WT_ROOT}/commands"/*.sh; do
+    local cmd_name
+    cmd_name=$(basename "$cmd_file" .sh)
+
+    # Check for exact match first
+    if [[ "$cmd_name" == "$abbrev" ]]; then
+      echo "$cmd_name"
+      return 0
+    fi
+
+    # Check if command starts with abbreviation
+    if [[ "$cmd_name" == "${abbrev}"* ]]; then
+      found_command="$cmd_name"
+      ((match_count++))
+    fi
+  done
+
+  # If exactly one match, return it
+  if [[ $match_count -eq 1 ]]; then
+    echo "$found_command"
+    return 0
+  elif [[ $match_count -gt 1 ]]; then
+    echo "Error: Ambiguous command '$abbrev'. Multiple matches found." >&2
+    return 1
+  else
+    echo "Error: Unknown command '$abbrev'" >&2
+    return 1
+  fi
+}
+
 # Main dispatcher
 main() {
   if [[ $# -eq 0 ]]; then
@@ -48,13 +85,23 @@ main() {
     exit 1
   fi
 
-  local command="$1"
+  local command_input="$1"
   shift
+
+  # Find the actual command (supports abbreviations)
+  local command
+  command=$(find_command "$command_input")
+
+  if [[ $? -ne 0 ]]; then
+    echo >&2
+    show_usage
+    exit 1
+  fi
 
   local command_script="${WT_ROOT}/commands/${command}.sh"
 
   if [[ ! -f "$command_script" ]]; then
-    echo "Error: Unknown command '$command'" >&2
+    echo "Error: Command file not found for '$command'" >&2
     echo >&2
     show_usage
     exit 1
