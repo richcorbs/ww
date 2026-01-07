@@ -17,20 +17,20 @@ readonly ABBREV_FILE="${WT_FLOW_DIR}/abbreviations.json"
 
 # Error handling
 error() {
-  echo -e "${RED}Error: $1${NC}" >&2
+  echo -e "  ${RED}Error: $1${NC}" >&2
   exit 1
 }
 
 warn() {
-  echo -e "${YELLOW}Warning: $1${NC}" >&2
+  echo -e "  ${YELLOW}Warning: $1${NC}" >&2
 }
 
 info() {
-  echo -e "${BLUE}$1${NC}"
+  echo -e "  ${BLUE}$1${NC}"
 }
 
 success() {
-  echo -e "${GREEN}$1${NC}"
+  echo -e "  ${GREEN}$1${NC}"
 }
 
 # Git repository checks

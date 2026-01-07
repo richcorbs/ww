@@ -90,9 +90,9 @@ cmd_status() {
   fi
 
   # Display unassigned changes
-  echo "Unassigned changes:"
+  echo "  Unassigned changes:"
   if [[ -z "$all_files" ]]; then
-    echo "  (none)"
+    echo "    (none)"
   else
     # Pre-build associative arrays for file status (O(n) instead of O(n²))
     declare -A file_status_map
@@ -110,7 +110,7 @@ cmd_status() {
       local abbrev
       abbrev=$(get_abbreviation "$file")
       local status="${file_status_map[$file]}"
-      echo -e "  ${YELLOW}${abbrev}${NC}  ${status} ${file}"
+      echo -e "    ${YELLOW}${abbrev}${NC}  ${status} ${file}"
     done <<< "$all_files"
   fi
 
@@ -121,12 +121,12 @@ cmd_status() {
   names=$(list_worktree_names)
 
   if [[ -z "$names" ]]; then
-    echo "Worktrees:"
-    echo "  (none)"
+    echo "  Worktrees:"
+    echo "    (none)"
     echo ""
-    echo "  Use 'wt create <name> <branch>' to create a worktree"
+    echo "    Use 'wt create <name> <branch>' to create a worktree"
   else
-    echo "Worktrees:"
+    echo "  Worktrees:"
 
     local repo_root
     repo_root=$(get_repo_root)
@@ -142,7 +142,7 @@ cmd_status() {
 
       # Check if directory exists
       if [[ ! -d "$abs_path" ]]; then
-        echo -e "  ${RED}${name}${NC} (${branch}) - ${RED}MISSING${NC}"
+        echo -e "    ${RED}${name}${NC} (${branch}) - ${RED}MISSING${NC}"
         continue
       fi
 
@@ -197,9 +197,9 @@ cmd_status() {
         fi
       fi
 
-      echo -e "  ${GREEN}${name}${NC} (${branch})${status_str}"
+      echo -e "    ${GREEN}${name}${NC} (${branch})${status_str}"
       if [[ -n "$pr_info" ]]; then
-        echo -e "    ${pr_info}"
+        echo -e "      ${pr_info}"
       fi
 
       # Show uncommitted files if any
@@ -238,10 +238,12 @@ cmd_status() {
           local status_code="${file_status:0:2}"
           local filepath="${file_status:3}"
           local abbrev="${temp_abbrevs[$filepath]}"
-          echo -e "    ${YELLOW}${abbrev}${NC}  ${status_code} ${filepath}"
+          echo -e "      ${YELLOW}${abbrev}${NC}  ${status_code} ${filepath}"
         done
       fi
 
     done <<< "$names"
   fi
+
+  echo ""
 }
