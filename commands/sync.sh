@@ -111,7 +111,7 @@ cmd_sync() {
           info "  Removing worktree '${name}'..."
           if git worktree remove ".worktrees/${name}" --force 2>/dev/null; then
             # Remove metadata
-            remove_worktree_from_metadata "$name"
+            remove_worktree_metadata "$name"
 
             # Delete local branch
             git branch -d "${branch}" 2>/dev/null || git branch -D "${branch}" 2>/dev/null
