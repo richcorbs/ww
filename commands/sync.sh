@@ -103,7 +103,8 @@ cmd_sync() {
         branch=$(get_worktree_branch "$name")
 
         # Check if branch is merged into source branch
-        if git branch --merged "${source_branch}" | grep -q "^[* ]*${branch}$"; then
+        # Note: + prefix means checked out in a worktree, * means current branch
+        if git branch --merged "${source_branch}" | grep -q "^[*+ ]*${branch}$"; then
           info "Branch '${branch}' has been merged into ${source_branch}"
 
           # Remove worktree
