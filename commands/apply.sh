@@ -75,8 +75,9 @@ cmd_apply() {
   current_branch=$(git branch --show-current)
 
   # Get list of commits in worktree branch but not in current branch
+  # Use --reverse to get oldest first (for cherry-picking in order)
   local commits
-  commits=$(git log --format="%H" "${current_branch}..${worktree_branch}" 2>/dev/null | tac || true)
+  commits=$(git rev-list --reverse "${current_branch}..${worktree_branch}" 2>/dev/null || true)
 
   if [[ -z "$commits" ]]; then
     info "No new commits to apply from '${worktree_name}'"
