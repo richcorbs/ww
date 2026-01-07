@@ -538,9 +538,27 @@ cd ~/Code/wt
 # Edit files
 # ... make changes ...
 
+# Run tests (one command - fast and local)
+./run-tests.sh
+
 # Test without installing
 ./bin/wt status
 
 # When ready, run install
 ./install.sh
 ```
+
+### Testing
+
+Run the test suite with a single command:
+
+```bash
+./run-tests.sh
+```
+
+- ✅ Fast: All tests run locally in ~2 seconds
+- ✅ Isolated: Creates fresh test repos for each test
+- ✅ Auto-cleanup: Removes test artifacts automatically
+- ✅ No setup: Just run the script
+
+Requirements: `git` and `jq` (the script will check and tell you if anything is missing)
