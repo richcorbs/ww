@@ -1,0 +1,16 @@
+# Test directories
+test-repos/
+*.test-repo
+
+# macOS
+.DS_Store
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+.\#*

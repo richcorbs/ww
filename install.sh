@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+# Installation script for wt (worktree workflow manager)
+
+set -euo pipefail
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+error() {
+  echo -e "${RED}Error: $1${NC}" >&2
+  exit 1
+}
+
+warn() {
+  echo -e "${YELLOW}Warning: $1${NC}" >&2
+}
+
+info() {
+  echo -e "${BLUE}$1${NC}"
+}
+
+success() {
+  echo -e "${GREEN}$1${NC}"
+}
+
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BIN_DIR="${SCRIPT_DIR}/bin"
+
+# Check dependencies
+info "Checking dependencies..."
+
+if ! command -v git &> /dev/null; then
+  error "git is required but not installed"
+fi
+
+if ! command -v jq &> /dev/null; then
+  error "jq is required but not installed. Install it with: brew install jq"
+fi
+
+# Check git version
+GIT_VERSION=$(git --version | awk '{print $3}')
+MIN_GIT_VERSION="2.5.0"
+
+if ! printf '%s\n%s\n' "$MIN_GIT_VERSION" "$GIT_VERSION" | sort -V -C; then
+  error "git version $MIN_GIT_VERSION or higher is required (found $GIT_VERSION)"
+fi
+
+success "All dependencies satisfied"
+
+# Determine installation directory
+info ""
+info "Determining installation location..."
+
+INSTALL_DIR=""
+
+# Check common locations in order of preference
+if [[ -d "$HOME/.local/bin" ]]; then
+  INSTALL_DIR="$HOME/.local/bin"
+elif [[ -d "/usr/local/bin" ]] && [[ -w "/usr/local/bin" ]]; then
+  INSTALL_DIR="/usr/local/bin"
+elif [[ -d "$HOME/bin" ]]; then
+  INSTALL_DIR="$HOME/bin"
+else
+  # Create ~/.local/bin
+  mkdir -p "$HOME/.local/bin"
+  INSTALL_DIR="$HOME/.local/bin"
+fi
+
+info "Installing to: ${INSTALL_DIR}"
+
+# Check if directory is in PATH
+if [[ ":$PATH:" != *":${INSTALL_DIR}:"* ]]; then
+  warn "${INSTALL_DIR} is not in your PATH"
+  info "Add this to your ~/.bashrc or ~/.zshrc:"
+  info "  export PATH=\"${INSTALL_DIR}:\$PATH\""
+  echo ""
+fi
+
+# Create symlink
+info "Creating symlink..."
+
+if [[ -L "${INSTALL_DIR}/wt" ]] || [[ -f "${INSTALL_DIR}/wt" ]]; then
+  warn "${INSTALL_DIR}/wt already exists"
+
+  read -rp "Overwrite? (y/N) " response
+  if [[ ! "$response" =~ ^[Yy]$ ]]; then
+    info "Installation cancelled"
+    exit 0
+  fi
+
+  rm -f "${INSTALL_DIR}/wt"
+fi
+
+ln -s "${BIN_DIR}/wt" "${INSTALL_DIR}/wt"
+
+success "Symlink created: ${INSTALL_DIR}/wt -> ${BIN_DIR}/wt"
+
+# Verify installation
+info ""
+info "Verifying installation..."
+
+if command -v wt &> /dev/null; then
+  success "Installation successful!"
+  echo ""
+  info "Try running:"
+  info "  wt --help"
+  echo ""
+  info "To get started in a git repository:"
+  info "  wt init"
+else
+  error "Installation failed. wt command not found in PATH."
+fi

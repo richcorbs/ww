@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+# Remove a worktree
+
+show_help() {
+  cat <<EOF
+Usage: wt remove <worktree> [--force]
+
+Remove a worktree and clean up metadata.
+Warns if the branch has unpushed commits unless --force is used.
+
+Arguments:
+  worktree    Name of the worktree to remove
+
+Options:
+  -f, --force   Force removal even with unpushed commits
+  -h, --help    Show this help message
+
+Example:
+  wt remove feature-auth
+  wt remove feature-auth --force
+EOF
+}
+
+cmd_remove() {
+  # Parse arguments
+  local worktree_name=""
+  local force=false
+
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      -h|--help)
+        show_help
+        exit 0
+        ;;
+      -f|--force)
+        force=true
+        ;;
+      *)
+        if [[ -z "$worktree_name" ]]; then
+          worktree_name="$1"
+        else
+          error "Unknown argument: $1"
+        fi
+        ;;
+    esac
+    shift
+  done
+
+  # Validate arguments
+  if [[ -z "$worktree_name" ]]; then
+    error "Missing required argument: worktree"
+  fi
+
+  # Ensure initialized
+  ensure_git_repo
+  ensure_initialized
+
+  # Check if worktree exists
+  if ! worktree_exists "$worktree_name"; then
+    error "Worktree '$worktree_name' not found"
+  fi
+
+  local repo_root
+  repo_root=$(get_repo_root)
+
+  local worktree_path
+  worktree_path=$(get_worktree_path "$worktree_name")
+
+  local worktree_branch
+  worktree_branch=$(get_worktree_branch "$worktree_name")
+
+  local abs_worktree_path="${repo_root}/${worktree_path}"
+
+  # Check if directory exists
+  if [[ ! -d "$abs_worktree_path" ]]; then
+    warn "Worktree directory not found at ${abs_worktree_path}"
+    warn "Cleaning up metadata only..."
+
+    remove_worktree_metadata "$worktree_name"
+
+    # Remove any applied commits for this worktree
+    local applied_commits
+    applied_commits=$(get_applied_commits_for_worktree "$worktree_name")
+
+    while IFS= read -r commit; do
+      [[ -n "$commit" ]] && remove_applied_commit "$commit"
+    done <<< "$applied_commits"
+
+    success "Metadata cleaned up for '${worktree_name}'"
+    exit 0
+  fi
+
+  # Check for unpushed commits if not forcing
+  if [[ "$force" == "false" ]]; then
+    if pushd "$abs_worktree_path" > /dev/null 2>&1; then
+      local upstream
+      upstream=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "")
+
+      if [[ -n "$upstream" ]]; then
+        local unpushed
+        unpushed=$(git rev-list --count "${upstream}..HEAD" 2>/dev/null || echo "0")
+
+        if [[ "$unpushed" -gt 0 ]]; then
+          popd > /dev/null 2>&1
+          error "Branch '${worktree_branch}' has ${unpushed} unpushed commit(s). Use --force to remove anyway."
+        fi
+      fi
+
+      # Check for uncommitted changes
+      if has_uncommitted_changes; then
+        popd > /dev/null 2>&1
+        warn "Worktree has uncommitted changes"
+
+        read -rp "Continue with removal? (y/N) " response
+        if [[ ! "$response" =~ ^[Yy]$ ]]; then
+          info "Removal cancelled"
+          exit 0
+        fi
+      fi
+
+      popd > /dev/null 2>&1
+    fi
+  fi
+
+  # Remove the worktree
+  info "Removing worktree '${worktree_name}'..."
+
+  if git worktree remove "$abs_worktree_path" 2>&1 || git worktree remove --force "$abs_worktree_path" 2>&1; then
+    # Clean up metadata
+    remove_worktree_metadata "$worktree_name"
+
+    # Remove any applied commits for this worktree
+    local applied_commits
+    applied_commits=$(get_applied_commits_for_worktree "$worktree_name")
+
+    while IFS= read -r commit; do
+      [[ -n "$commit" ]] && remove_applied_commit "$commit"
+    done <<< "$applied_commits"
+
+    success "Worktree '${worktree_name}' removed"
+  else
+    error "Failed to remove worktree"
+  fi
+}

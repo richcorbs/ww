@@ -1,0 +1,181 @@
+#!/usr/bin/env bash
+# Show uncommitted changes and worktree status
+
+show_help() {
+  cat <<EOF
+Usage: wt status
+
+Show uncommitted changes in staging with two-letter abbreviations,
+and display all worktrees with their status.
+
+Options:
+  -h, --help    Show this help message
+EOF
+}
+
+cmd_status() {
+  # Parse arguments
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      -h|--help)
+        show_help
+        exit 0
+        ;;
+      *)
+        error "Unknown option: $1"
+        ;;
+    esac
+    shift
+  done
+
+  # Ensure we're in a git repository
+  ensure_git_repo
+
+  # Auto-initialize if not already done
+  if ! is_initialized; then
+    warn "Worktree workflow not initialized. Initializing now..."
+    cmd_init() { source "${WT_ROOT}/commands/init.sh" && cmd_init; }
+    cmd_init
+    echo ""
+  fi
+
+  # Check if on worktree-staging branch
+  local current_branch
+  current_branch=$(git branch --show-current)
+  if [[ "$current_branch" != "worktree-staging" ]]; then
+    warn "Not on worktree-staging branch (currently on: ${current_branch})"
+    info "Use 'git checkout worktree-staging' to switch"
+    echo ""
+  fi
+
+  # Check if worktree-staging is behind main
+  if git remote get-url origin > /dev/null 2>&1; then
+    # Determine main branch name
+    local main_branch
+    main_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+
+    # Check if origin/main exists
+    if git show-ref --verify --quiet "refs/remotes/origin/${main_branch}"; then
+      # Compare worktree-staging with origin/main
+      local behind_count
+      behind_count=$(git rev-list --count HEAD..origin/${main_branch} 2>/dev/null || echo "0")
+
+      if [[ "$behind_count" -gt 0 ]]; then
+        warn "worktree-staging is ${behind_count} commit(s) behind origin/${main_branch}"
+        info "Run 'wt sync' to merge latest changes from ${main_branch}"
+        echo ""
+      fi
+    fi
+  fi
+
+  # Get uncommitted changes
+  local changed_files
+  changed_files=$(git diff --name-only 2>/dev/null || true)
+  local staged_files
+  staged_files=$(git diff --cached --name-only 2>/dev/null || true)
+  local untracked_files
+  untracked_files=$(git ls-files --others --exclude-standard 2>/dev/null || true)
+
+  # Combine all files (unique)
+  local all_files
+  all_files=$(echo -e "${changed_files}\n${staged_files}\n${untracked_files}" | sort -u | grep -v '^$' || true)
+
+  # Generate abbreviations for all files
+  if [[ -n "$all_files" ]]; then
+    local files_array=()
+    while IFS= read -r file; do
+      files_array+=("$file")
+    done <<< "$all_files"
+
+    generate_abbreviations_for_files "${files_array[@]}"
+  fi
+
+  # Display unassigned changes
+  echo "Unassigned changes:"
+  if [[ -z "$all_files" ]]; then
+    echo "  (none)"
+  else
+    while IFS= read -r file; do
+      local abbrev
+      abbrev=$(get_abbreviation "$file")
+
+      # Determine status indicator
+      local status=""
+      if echo "$untracked_files" | grep -q "^${file}$"; then
+        status="??"
+      elif echo "$staged_files" | grep -q "^${file}$"; then
+        status="A "
+      elif echo "$changed_files" | grep -q "^${file}$"; then
+        status="M "
+      fi
+
+      echo -e "  ${YELLOW}${abbrev}${NC}  ${status} ${file}"
+    done <<< "$all_files"
+  fi
+
+  echo ""
+
+  # Display worktrees
+  local names
+  names=$(list_worktree_names)
+
+  if [[ -z "$names" ]]; then
+    echo "Worktrees:"
+    echo "  (none)"
+    echo ""
+    info "Use 'wt create <name> <branch>' to create a worktree"
+  else
+    echo "Worktrees:"
+
+    local repo_root
+    repo_root=$(get_repo_root)
+
+    while IFS= read -r name; do
+      local branch
+      branch=$(get_worktree_branch "$name")
+
+      local path
+      path=$(get_worktree_path "$name")
+
+      local abs_path="${repo_root}/${path}"
+
+      # Check if directory exists
+      if [[ ! -d "$abs_path" ]]; then
+        echo -e "  ${RED}${name}${NC} (${branch}) - ${RED}MISSING${NC}"
+        continue
+      fi
+
+      # Count uncommitted changes in worktree
+      local uncommitted_count=0
+      if pushd "$abs_path" > /dev/null 2>&1; then
+        uncommitted_count=$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+        popd > /dev/null 2>&1
+      fi
+
+      # Count commits not in main
+      local commit_count=0
+      if pushd "$abs_path" > /dev/null 2>&1; then
+        local main_branch
+        main_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
+        commit_count=$(git rev-list --count "origin/${main_branch}..HEAD" 2>/dev/null || echo "0")
+        popd > /dev/null 2>&1
+      fi
+
+      local status_parts=()
+      if [[ "$uncommitted_count" -gt 0 ]]; then
+        status_parts+=("${uncommitted_count} uncommitted")
+      fi
+      if [[ "$commit_count" -gt 0 ]]; then
+        status_parts+=("${commit_count} commit(s)")
+      fi
+
+      local status_str=""
+      if [[ ${#status_parts[@]} -gt 0 ]]; then
+        status_str=" - $(IFS=", "; echo "${status_parts[*]}")"
+      fi
+
+      echo -e "  ${GREEN}${name}${NC} (${branch})${status_str}"
+
+    done <<< "$names"
+  fi
+}

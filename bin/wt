@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# Main worktree workflow dispatcher
+
+set -euo pipefail
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# Source shared libraries
+# shellcheck source=../lib/wt-lib.sh
+source "${WT_ROOT}/lib/wt-lib.sh"
+# shellcheck source=../lib/abbreviations.sh
+source "${WT_ROOT}/lib/abbreviations.sh"
+
+# Show usage
+show_usage() {
+  cat <<EOF
+wt - Worktree workflow manager
+
+Usage: wt <command> [options]
+
+Commands:
+  init              Initialize worktree workflow in current repository
+  status            Show uncommitted changes and worktree status
+  create            Create a new worktree
+  list              List all worktrees
+  assign            Assign a file to a worktree
+  assign-all        Assign all uncommitted changes to a worktree
+  commit            Commit changes in a worktree
+  apply             Apply worktree commits to staging
+  unapply           Unapply worktree commits from staging
+  push              Push a worktree branch to remote
+  remove            Remove a worktree
+
+Run 'wt <command> --help' for more information on a command.
+EOF
+}
+
+# Main dispatcher
+main() {
+  if [[ $# -eq 0 ]]; then
+    show_usage
+    exit 1
+  fi
+
+  local command="$1"
+  shift
+
+  local command_script="${WT_ROOT}/commands/${command}.sh"
+
+  if [[ ! -f "$command_script" ]]; then
+    echo "Error: Unknown command '$command'" >&2
+    echo >&2
+    show_usage
+    exit 1
+  fi
+
+  # Source and execute the command
+  # shellcheck source=/dev/null
+  source "$command_script"
+
+  # Call the command's main function (convention: cmd_<command>)
+  local func_name="cmd_${command//-/_}"
+  if declare -f "$func_name" > /dev/null; then
+    "$func_name" "$@"
+  else
+    error "Command script '$command' does not define function '$func_name'"
+  fi
+}
+
+main "$@"
