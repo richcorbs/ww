@@ -104,8 +104,8 @@ assert_success "$WT_BIN assign app/models/ test-wt" "wt assign directory should 
 COMMIT_COUNT=$(git log --oneline | grep "wt: assign" | wc -l | tr -d ' ')
 assert_success "[[ $COMMIT_COUNT -ge 3 ]]" "Should have multiple assignment commits"
 
-# Test: wt assign-all
-test_section "Testing: wt assign-all"
+# Test: wt assign . (assign all)
+test_section "Testing: wt assign (all files)"
 REPO=$(create_test_repo "assign-all-test")
 cd "$REPO"
 $WT_BIN init > /dev/null 2>&1
@@ -117,7 +117,7 @@ echo "Updated" >> app/controllers/posts_controller.rb
 echo "New service" > app/services/new_service.rb
 
 # Assign all
-assert_success "$WT_BIN assign-all test-wt" "wt assign-all should succeed"
+assert_success "$WT_BIN assign . test-wt" "wt assign . should succeed"
 
 # Check all files are in worktree
 assert_file_exists ".worktrees/test-wt/app/models/admin.rb"
@@ -201,8 +201,8 @@ cd "$REPO"
 $WT_BIN init > /dev/null 2>&1
 $WT_BIN create test-wt feature/test > /dev/null 2>&1
 
-echo "class Admin; end" > app/models/admin.rb
-$WT_BIN assign app/models/admin.rb test-wt > /dev/null 2>&1
+# Create file directly in worktree and commit
+echo "class Admin; end" > .worktrees/test-wt/app/models/admin.rb
 $WT_BIN commit test-wt "Add admin model" > /dev/null 2>&1
 
 # Apply commits from worktree to staging

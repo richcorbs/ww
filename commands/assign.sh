@@ -3,13 +3,13 @@
 
 show_help() {
   cat <<EOF
-Usage: wt assign <file|abbreviation|directory|*> <worktree>
+Usage: wt assign <file|abbreviation|directory|.> <worktree>
 
 Assign uncommitted changes to a worktree and commit them to worktree-staging.
 Can assign a single file, all files in a directory, all files, or use two-letter abbreviation.
 
 Arguments:
-  file|abbreviation|directory|*  File path, directory path, two-letter abbreviation, or * for all
+  file|abbreviation|directory|.  File path, directory path, two-letter abbreviation, or . for all
   worktree                       Name of the worktree
 
 Options:
@@ -19,7 +19,7 @@ Examples:
   wt assign ab feature-auth                # Single file by abbreviation
   wt assign app/models/user.rb feature-auth # Single file by path
   wt assign app/models/ feature-auth       # All changed files in directory
-  wt assign * feature-auth                 # All uncommitted files
+  wt assign . feature-auth                 # All uncommitted files
 EOF
 }
 
@@ -68,7 +68,7 @@ cmd_assign() {
   # Resolve file path(s)
   local files_to_assign=()
 
-  if [[ "$file_or_abbrev" == "*" ]]; then
+  if [[ "$file_or_abbrev" == "*" ]] || [[ "$file_or_abbrev" == "." ]]; then
     # Assign all uncommitted files
     info "Assigning all uncommitted changes..."
 
@@ -183,7 +183,7 @@ cmd_assign() {
       if pushd "$abs_worktree_path" > /dev/null 2>&1; then
         # Apply the patch
         if git apply "$patch_file" 2>/dev/null || cp "${repo_root}/${filepath}" "$filepath" 2>/dev/null; then
-          ((assigned_count++))
+          assigned_count=$((assigned_count + 1))
         else
           popd > /dev/null 2>&1 || true
           rm -f "$patch_file"

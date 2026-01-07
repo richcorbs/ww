@@ -122,7 +122,7 @@ cmd_status() {
     echo "Worktrees:"
     echo "  (none)"
     echo ""
-    info "Use 'wt create <name> <branch>' to create a worktree"
+    echo "  Use 'wt create <name> <branch>' to create a worktree"
   else
     echo "Worktrees:"
 

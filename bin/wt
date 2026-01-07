@@ -4,7 +4,14 @@
 set -euo pipefail
 
 # Get the directory where this script is located
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Resolve symlinks to find the actual script location
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+while [ -L "$SCRIPT_PATH" ]; do
+  SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+  SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+  [[ $SCRIPT_PATH != /* ]] && SCRIPT_PATH="$SCRIPT_DIR/$SCRIPT_PATH"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 WT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # Source shared libraries
@@ -26,7 +33,6 @@ Commands:
   create            Create a new worktree
   list              List all worktrees
   assign            Assign a file to a worktree
-  assign-all        Assign all uncommitted changes to a worktree
   commit            Commit changes in a worktree
   undo              Undo last commit in a worktree
   unassign          Unassign a file from a worktree

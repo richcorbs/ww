@@ -207,7 +207,17 @@ ensure_not_protected_branch() {
 
 # Check for uncommitted changes
 has_uncommitted_changes() {
-  ! git diff-index --quiet HEAD -- 2>/dev/null
+  # Check for modified/staged files
+  if ! git diff-index --quiet HEAD -- 2>/dev/null; then
+    return 0
+  fi
+
+  # Check for untracked files
+  if [[ -n "$(git ls-files --others --exclude-standard 2>/dev/null)" ]]; then
+    return 0
+  fi
+
+  return 1
 }
 
 # Get worktree path from name
