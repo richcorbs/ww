@@ -44,6 +44,12 @@ cmd_status() {
     git fetch origin > /dev/null 2>&1 || true
   fi
 
+  # Show current branch at the top
+  local current_branch
+  current_branch=$(git branch --show-current)
+  echo "  Working in: ${current_branch}"
+  echo ""
+
   # Check if worktree-staging is behind main (show first)
   if git remote get-url origin > /dev/null 2>&1; then
     # Determine main branch name
@@ -64,8 +70,6 @@ cmd_status() {
   fi
 
   # Check if on worktree-staging branch
-  local current_branch
-  current_branch=$(git branch --show-current)
   if [[ "$current_branch" != "worktree-staging" ]]; then
     warn "Not on worktree-staging branch (currently on: ${current_branch})"
     info "Use 'git checkout worktree-staging' to switch"
