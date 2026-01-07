@@ -168,7 +168,7 @@ cmd_assign() {
 
     # Stage and commit the file to worktree-staging
     git add "$filepath"
-    if git commit -m "wt: assign ${filepath} to ${worktree_name}" 2>&1; then
+    if git commit -m "wt: assign ${filepath} to ${worktree_name}"; then
       local commit_sha
       commit_sha=$(git rev-parse HEAD)
       local short_sha
@@ -182,7 +182,7 @@ cmd_assign() {
       # Apply to worktree
       if pushd "$abs_worktree_path" > /dev/null 2>&1; then
         # Apply the patch
-        if git apply "$patch_file" 2>&1 || cp "${repo_root}/${filepath}" "$filepath" 2>&1; then
+        if git apply "$patch_file" 2>/dev/null || cp "${repo_root}/${filepath}" "$filepath" 2>/dev/null; then
           ((assigned_count++))
         else
           popd > /dev/null 2>&1
@@ -204,8 +204,10 @@ cmd_assign() {
 
   if [[ $assigned_count -eq ${#files_to_assign[@]} ]]; then
     success "Assigned ${assigned_count} file(s) to '${worktree_name}' and committed to worktree-staging"
+    exit 0
   elif [[ $assigned_count -gt 0 ]]; then
     warn "Assigned ${assigned_count} of ${#files_to_assign[@]} file(s) to '${worktree_name}'"
+    exit 0
   else
     error "Failed to assign files"
   fi
