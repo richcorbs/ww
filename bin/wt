@@ -120,6 +120,7 @@ main() {
   # Call the command's main function (convention: cmd_<command>)
   local func_name="cmd_${command//-/_}"
   if declare -f "$func_name" > /dev/null; then
+    echo ""  # Blank line at the top
     "$func_name" "$@"
   else
     error "Command script '$command' does not define function '$func_name'"
