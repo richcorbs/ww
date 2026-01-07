@@ -183,7 +183,7 @@ cmd_assign() {
       if pushd "$abs_worktree_path" > /dev/null 2>&1; then
         # Apply the patch
         if git apply "$patch_file" 2>/dev/null || cp "${repo_root}/${filepath}" "$filepath" 2>/dev/null; then
-          ((assigned_count++))
+          assigned_count=$((assigned_count + 1))
         else
           popd > /dev/null 2>&1 || true
           rm -f "$patch_file"
