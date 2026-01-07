@@ -39,6 +39,11 @@ cmd_status() {
     echo ""
   fi
 
+  # Fetch latest from origin to ensure status is up-to-date
+  if git remote get-url origin > /dev/null 2>&1; then
+    git fetch origin > /dev/null 2>&1 || true
+  fi
+
   # Check if worktree-staging is behind main (show first)
   if git remote get-url origin > /dev/null 2>&1; then
     # Determine main branch name
