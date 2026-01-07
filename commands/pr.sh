@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+# Open GitHub PR creation page for a worktree
+
+show_help() {
+  cat <<EOF
+Usage: wt pr <worktree>
+
+Open the GitHub PR creation page for a worktree's branch in your browser.
+The worktree branch must be pushed to origin first.
+
+Arguments:
+  worktree    Name of the worktree
+
+Options:
+  -h, --help    Show this help message
+
+Example:
+  wt pr feature-auth
+EOF
+}
+
+cmd_pr() {
+  # Parse arguments
+  local worktree_name=""
+
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      -h|--help)
+        show_help
+        exit 0
+        ;;
+      *)
+        if [[ -z "$worktree_name" ]]; then
+          worktree_name="$1"
+        else
+          error "Too many arguments"
+        fi
+        ;;
+    esac
+    shift
+  done
+
+  # Validate arguments
+  if [[ -z "$worktree_name" ]]; then
+    error "Missing required argument: worktree"
+  fi
+
+  # Ensure initialized
+  ensure_git_repo
+  ensure_initialized
+
+  # Check if worktree exists
+  if ! worktree_exists "$worktree_name"; then
+    error "Worktree '$worktree_name' not found"
+  fi
+
+  # Get worktree branch
+  local branch
+  branch=$(get_worktree_branch "$worktree_name")
+
+  if [[ -z "$branch" ]]; then
+    error "Could not determine branch for worktree '$worktree_name'"
+  fi
+
+  # Get remote URL
+  local remote_url
+  remote_url=$(git remote get-url origin 2>/dev/null)
+
+  if [[ -z "$remote_url" ]]; then
+    error "No origin remote found. Please add a remote first."
+  fi
+
+  # Parse GitHub URL
+  # Handle both HTTPS and SSH formats
+  local github_url=""
+
+  if [[ "$remote_url" =~ ^https://github.com/ ]]; then
+    # HTTPS format: https://github.com/user/repo.git
+    github_url=$(echo "$remote_url" | sed 's/\.git$//')
+  elif [[ "$remote_url" =~ ^git@github.com: ]]; then
+    # SSH format: git@github.com:user/repo.git
+    github_url=$(echo "$remote_url" | sed 's/^git@github.com:/https:\/\/github.com\//' | sed 's/\.git$//')
+  else
+    error "Could not parse GitHub URL from remote: $remote_url"
+  fi
+
+  # Construct PR creation URL
+  # Format: https://github.com/user/repo/compare/main...branch?expand=1
+  local pr_url="${github_url}/compare/main...${branch}?expand=1"
+
+  info "Opening PR creation page for branch '${branch}'..."
+  info "URL: ${pr_url}"
+
+  # Open in browser (cross-platform)
+  if command -v open > /dev/null 2>&1; then
+    # macOS
+    open "$pr_url"
+  elif command -v xdg-open > /dev/null 2>&1; then
+    # Linux
+    xdg-open "$pr_url"
+  elif command -v start > /dev/null 2>&1; then
+    # Windows
+    start "$pr_url"
+  else
+    warn "Could not open browser automatically"
+    info "Please open this URL manually: ${pr_url}"
+  fi
+
+  success "PR page opened for '${worktree_name}'"
+}

@@ -28,9 +28,13 @@ Commands:
   assign            Assign a file to a worktree
   assign-all        Assign all uncommitted changes to a worktree
   commit            Commit changes in a worktree
+  undo              Undo last commit in a worktree
+  unassign          Unassign a file from a worktree
   apply             Apply worktree commits to staging
   unapply           Unapply worktree commits from staging
   push              Push a worktree branch to remote
+  pr                Open GitHub PR creation page for a worktree
+  sync              Sync worktree-staging with main
   remove            Remove a worktree
 
 Run 'wt <command> --help' for more information on a command.

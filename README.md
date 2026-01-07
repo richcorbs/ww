@@ -238,6 +238,21 @@ Push a worktree's branch to the remote.
 wt push feature-auth
 ```
 
+### `wt pr <worktree>`
+
+Open the GitHub PR creation page for a worktree's branch in your browser.
+
+```bash
+wt pr feature-auth
+```
+
+The worktree branch must be pushed to origin first. This command:
+1. Detects the worktree's branch name
+2. Constructs the GitHub PR creation URL
+3. Opens it in your default browser
+
+Works with both HTTPS and SSH remote URLs.
+
 ### `wt sync [branch]`
 
 Sync `worktree-staging` with another branch (default: main).
@@ -284,6 +299,7 @@ wt commit auth "Add authentication"
 
 # Push and create PR
 wt push auth
+wt pr auth  # Opens GitHub PR creation page in browser
 
 # After PR is merged to main, sync
 wt sync
@@ -313,9 +329,12 @@ wt assign cd api
 wt commit auth "Add authentication"
 wt commit api "Refactor API base"
 
-# Push both
+# Push and create PRs
 wt push auth
+wt pr auth
+
 wt push api
+wt pr api
 ```
 
 ### Assigning Directories
