@@ -94,20 +94,22 @@ cmd_status() {
   if [[ -z "$all_files" ]]; then
     echo "  (none)"
   else
+    # Pre-build associative arrays for file status (O(n) instead of O(n²))
+    declare -A file_status_map
+    while IFS= read -r file; do
+      [[ -n "$file" ]] && file_status_map["$file"]="??"
+    done <<< "$untracked_files"
+    while IFS= read -r file; do
+      [[ -n "$file" ]] && file_status_map["$file"]="A "
+    done <<< "$staged_files"
+    while IFS= read -r file; do
+      [[ -n "$file" ]] && file_status_map["$file"]="M "
+    done <<< "$changed_files"
+
     while IFS= read -r file; do
       local abbrev
       abbrev=$(get_abbreviation "$file")
-
-      # Determine status indicator
-      local status=""
-      if echo "$untracked_files" | grep -q "^${file}$"; then
-        status="??"
-      elif echo "$staged_files" | grep -q "^${file}$"; then
-        status="A "
-      elif echo "$changed_files" | grep -q "^${file}$"; then
-        status="M "
-      fi
-
+      local status="${file_status_map[$file]}"
       echo -e "  ${YELLOW}${abbrev}${NC}  ${status} ${file}"
     done <<< "$all_files"
   fi
@@ -160,12 +162,10 @@ cmd_status() {
         popd > /dev/null 2>&1
       fi
 
-      # Count commits not in main
+      # Count commits not in worktree-staging
       local commit_count=0
       if pushd "$abs_path" > /dev/null 2>&1; then
-        local main_branch
-        main_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
-        commit_count=$(git rev-list --count "origin/${main_branch}..HEAD" 2>/dev/null || echo "0")
+        commit_count=$(git rev-list --count "worktree-staging..HEAD" 2>/dev/null || echo "0")
         popd > /dev/null 2>&1
       fi
 
@@ -206,11 +206,15 @@ cmd_status() {
       if [[ ${#uncommitted_files[@]} -gt 0 ]]; then
         # Generate display-only abbreviations for worktree files (sequential to avoid conflicts)
         declare -A temp_abbrevs
-        local used_abbrevs=()
+        declare -A used_abbrevs  # Use associative array for O(1) lookups
 
         # Get current unassigned file abbreviations to avoid conflicts
-        local unassigned_abbrevs
-        unassigned_abbrevs=$(read_abbreviations 2>/dev/null | jq -r '.[]' 2>/dev/null || echo "")
+        declare -A unassigned_abbrevs_map
+        local unassigned_abbrevs_list
+        unassigned_abbrevs_list=$(read_abbreviations 2>/dev/null | jq -r '.[]' 2>/dev/null || echo "")
+        while IFS= read -r abbrev; do
+          [[ -n "$abbrev" ]] && unassigned_abbrevs_map["$abbrev"]=1
+        done <<< "$unassigned_abbrevs_list"
 
         for file_status in "${uncommitted_files[@]}"; do
           local filepath="${file_status:3}"
@@ -220,13 +224,13 @@ cmd_status() {
           abbrev=$(hash_filepath "$filepath")
           abbrev=$(hash_to_letters "$abbrev")
 
-          # Check for collisions and find next available
-          while [[ " ${used_abbrevs[@]} " =~ " ${abbrev} " ]] || echo "$unassigned_abbrevs" | grep -q "^${abbrev}$"; do
+          # Check for collisions and find next available (O(1) lookups)
+          while [[ -n "${used_abbrevs[$abbrev]:-}" ]] || [[ -n "${unassigned_abbrevs_map[$abbrev]:-}" ]]; do
             abbrev=$(find_next_abbrev "$abbrev")
           done
 
           temp_abbrevs["$filepath"]="$abbrev"
-          used_abbrevs+=("$abbrev")
+          used_abbrevs["$abbrev"]=1
         done
 
         # Display with abbreviations
