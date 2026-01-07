@@ -185,12 +185,12 @@ cmd_assign() {
         if git apply "$patch_file" 2>/dev/null || cp "${repo_root}/${filepath}" "$filepath" 2>/dev/null; then
           ((assigned_count++))
         else
-          popd > /dev/null 2>&1
+          popd > /dev/null 2>&1 || true
           rm -f "$patch_file"
           warn "Failed to apply ${filepath} to worktree, but it's committed to staging"
         fi
 
-        popd > /dev/null 2>&1
+        popd > /dev/null 2>&1 || true
       else
         rm -f "$patch_file"
         warn "Failed to enter worktree directory for ${filepath}, but it's committed to staging"
