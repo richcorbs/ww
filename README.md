@@ -285,14 +285,22 @@ Works with both HTTPS and SSH remote URLs.
 
 ### `wt sync [branch]`
 
-Sync `worktree-staging` with another branch (default: main).
+Sync `worktree-staging` with another branch (default: main). Automatically detects and cleans up worktrees whose branches have been merged.
 
 ```bash
-wt sync           # Sync from main
+wt sync           # Sync from main and clean up merged worktrees
 wt sync develop   # Sync from develop
 ```
 
-Use this after your feature branches are merged to main, to keep `worktree-staging` up-to-date.
+What it does:
+1. Fetches latest changes from origin
+2. Updates local branch from origin
+3. Merges branch into `worktree-staging`
+4. **Automatically detects worktrees with merged branches**
+5. **Removes merged worktrees**
+6. **Deletes corresponding remote branches**
+
+This is now a one-stop command for staying in sync and cleaning up finished work.
 
 ### `wt remove <worktree> [--force]`
 
@@ -425,12 +433,20 @@ wt assign app/models/user.rb feature-auth
 ### Syncing After Merges
 
 ```bash
-# Your feature branches got merged to main
-# Sync worktree-staging to get those changes
+# Your feature branches got merged to main on GitHub
+# Just run sync - it handles everything automatically
 
 wt sync
 
-# Now worktree-staging has everything from main
+# Output:
+# ✓ Successfully synced worktree-staging with 'main'
+# ✓ Branch 'feature/user-auth' has been merged into main
+#   - Removing worktree 'auth'...
+#   - Deleting remote branch 'feature/user-auth'...
+#   ✓ Cleaned up 'auth'
+# ✓ Cleaned up 1 merged worktree(s)
+
+# Done! worktree-staging is updated and merged work is cleaned up
 # Continue working on new features
 ```
 
