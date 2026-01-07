@@ -137,6 +137,7 @@ cmd_sync() {
     else
       info "No merged worktrees to clean up"
     fi
+    exit 0
   else
     error "Merge conflicts detected. Please resolve them and commit."
   fi
