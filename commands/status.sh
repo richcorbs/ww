@@ -39,16 +39,7 @@ cmd_status() {
     echo ""
   fi
 
-  # Check if on worktree-staging branch
-  local current_branch
-  current_branch=$(git branch --show-current)
-  if [[ "$current_branch" != "worktree-staging" ]]; then
-    warn "Not on worktree-staging branch (currently on: ${current_branch})"
-    info "Use 'git checkout worktree-staging' to switch"
-    echo ""
-  fi
-
-  # Check if worktree-staging is behind main
+  # Check if worktree-staging is behind main (show first)
   if git remote get-url origin > /dev/null 2>&1; then
     # Determine main branch name
     local main_branch
@@ -61,11 +52,19 @@ cmd_status() {
       behind_count=$(git rev-list --count HEAD..origin/${main_branch} 2>/dev/null || echo "0")
 
       if [[ "$behind_count" -gt 0 ]]; then
-        warn "worktree-staging is ${behind_count} commit(s) behind origin/${main_branch}"
         info "Run 'wt sync' to merge latest changes from ${main_branch}"
         echo ""
       fi
     fi
+  fi
+
+  # Check if on worktree-staging branch
+  local current_branch
+  current_branch=$(git branch --show-current)
+  if [[ "$current_branch" != "worktree-staging" ]]; then
+    warn "Not on worktree-staging branch (currently on: ${current_branch})"
+    info "Use 'git checkout worktree-staging' to switch"
+    echo ""
   fi
 
   # Get uncommitted changes
@@ -205,8 +204,30 @@ cmd_status() {
 
       # Show uncommitted files if any
       if [[ ${#uncommitted_files[@]} -gt 0 ]]; then
+        # Generate abbreviations for worktree files
+        local wt_files_array=()
         for file_status in "${uncommitted_files[@]}"; do
-          echo -e "    ${file_status}"
+          # Extract just the filename from git status format
+          local filepath="${file_status:3}"
+          wt_files_array+=("$filepath")
+        done
+
+        # Generate temporary abbreviations for display
+        local temp_abbrevs
+        declare -A temp_abbrevs
+        local abbrev_index=0
+        for filepath in "${wt_files_array[@]}"; do
+          local abbrev
+          abbrev=$(generate_abbreviation "$filepath")
+          temp_abbrevs["$filepath"]="$abbrev"
+        done
+
+        # Display with abbreviations
+        for file_status in "${uncommitted_files[@]}"; do
+          local status_code="${file_status:0:2}"
+          local filepath="${file_status:3}"
+          local abbrev="${temp_abbrevs[$filepath]}"
+          echo -e "    ${YELLOW}${abbrev}${NC}  ${status_code} ${filepath}"
         done
       fi
 
