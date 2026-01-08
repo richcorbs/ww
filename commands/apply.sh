@@ -99,12 +99,6 @@ cmd_apply() {
     info "Applying: ${commit_msg}"
 
     if git cherry-pick "$commit" 2>&1; then
-      local new_commit
-      new_commit=$(git rev-parse HEAD)
-
-      # Track the applied commit
-      add_applied_commit "$commit" "$new_commit" "$worktree_name"
-
       applied_commits+=("$commit")
     else
       error "Failed to apply commit ${commit}. Resolve conflicts and run 'git cherry-pick --continue'"
