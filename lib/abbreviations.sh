@@ -17,7 +17,8 @@ hash_to_letters() {
   local second=$((index % 26))
 
   # Convert to letters (a=0, z=25)
-  printf "%c%c" $((first + 97)) $((second + 97))
+  # Use awk for reliable ASCII conversion
+  awk -v f=$((first + 97)) -v s=$((second + 97)) 'BEGIN { printf "%c%c", f, s }'
 }
 
 # Read abbreviations file
@@ -89,7 +90,7 @@ find_next_abbrev() {
     local next_first=$((next_index / 26))
     local next_second=$((next_index % 26))
     local next_abbrev
-    next_abbrev=$(printf "%c%c" $((next_first + 97)) $((next_second + 97)))
+    next_abbrev=$(awk -v f=$((next_first + 97)) -v s=$((next_second + 97)) 'BEGIN { printf "%c%c", f, s }')
 
     if ! is_abbrev_used "$next_abbrev"; then
       echo "$next_abbrev"
