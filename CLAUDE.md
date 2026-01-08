@@ -2,7 +2,7 @@
 
 ## Project Philosophy
 
-**Core Concept**: `wt` implements a "work in staging, organize later" workflow. Developers work on a shared `worktree-staging` branch and use `wt assign` to organize changes into separate worktrees when ready to create PRs.
+**Core Concept**: `wt` implements a "work in staging, organize later" workflow. Developers work on a shared `wt-working` branch and use `wt assign` to organize changes into separate worktrees when ready to create PRs.
 
 **Key Principle**: Minimize friction - make it easy to "just start coding" and organize later.
 
@@ -65,13 +65,13 @@
 - `assign.sh` - Auto-creates worktrees, fzf selection, handles deleted files
 - `unassign.sh` - Uses patches to restore files (not git revert), avoids conflicts
 - `create.sh` - Simplified to single argument (branch name = worktree name)
-- `sync.sh` - Merges main into worktree-staging, auto-cleans merged branches
+- `sync.sh` - Merges main into wt-working, auto-cleans merged branches
 - `commit.sh` - Always uses fzf with [S] indicator for staged files, message pre-fill support
 
 ## Status Indicators
 
 ### Applied Status (lines 180-207 in status.sh)
-- Uses `git patch-id` to detect if commits in worktree exist in worktree-staging
+- Uses `git patch-id` to detect if commits in worktree exist in wt-working
 - `[applied]` = all commits cherry-picked
 - `[not applied]` = some commits not yet in staging
 - **Note**: Only shows when there are commits to potentially apply
@@ -168,7 +168,7 @@ fi
 - Refactored wt unassign to use patches instead of git revert (avoids conflicts)
 - Fixed wt assign to handle deleted files properly
 - Added directory selection to fzf in all commands
-- Fixed applied/not applied indicator to check for assignment commits in worktree-staging
+- Fixed applied/not applied indicator to check for assignment commits in wt-working
 - Removed redundant branch display from wt status (show name only)
 - Test suite needs updating for simplified commands
 
