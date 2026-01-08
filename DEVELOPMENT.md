@@ -6,15 +6,15 @@ This document describes the architecture, design decisions, and development work
 
 ### Core Concept
 
-`wt` is a bash-based CLI tool that provides a GitButler-like workflow using native git worktrees. The key innovation is the `worktree-staging` branch, which serves as a safe staging area isolated from `main`.
+`wt` is a bash-based CLI tool that provides a GitButler-like workflow using native git worktrees. The key innovation is the `wt-working` branch, which serves as a safe staging area isolated from `main`.
 
 ### Workflow Flow
 
-1. User works in `worktree-staging` branch
-2. Files are assigned to worktrees (committed to `worktree-staging`, copied to worktree)
+1. User works in `wt-working` branch
+2. Files are assigned to worktrees (committed to `wt-working`, copied to worktree)
 3. Changes are committed in worktrees on their feature branches
 4. Feature branches are pushed and merged to `main` via PRs
-5. `worktree-staging` is synced with `main` to get latest changes
+5. `wt-working` is synced with `main` to get latest changes
 
 ## Project Structure
 
@@ -184,11 +184,11 @@ cmd_<command_name>() {
 
 ## Design Decisions
 
-### 1. Why `worktree-staging` Branch?
+### 1. Why `wt-working` Branch?
 
 **Problem:** Working directly in `main` is risky - experimental work can pollute the main branch.
 
-**Solution:** Dedicated `worktree-staging` branch provides:
+**Solution:** Dedicated `wt-working` branch provides:
 - Safe experimentation without affecting `main`
 - Clear separation between "staging work" and "production code"
 - Ability to reset/rebase staging without affecting `main`
@@ -200,7 +200,7 @@ cmd_<command_name>() {
 
 **Issue:** This caused inconsistency - files would be "unassigned" but also in worktrees.
 
-**Solution:** Commit to `worktree-staging` when assigning:
+**Solution:** Commit to `wt-working` when assigning:
 - Files are removed from "unassigned" list
 - Changes are tracked in git history
 - Can be reverted with `wt unassign`
