@@ -138,9 +138,6 @@ cmd_sync() {
             # No uncommitted changes - clean up completely
             info "  Removing worktree '${name}'..."
             if git worktree remove ".worktrees/${name}" --force 2>/dev/null; then
-              # Remove metadata
-              remove_worktree_metadata "$name"
-
               # Delete local branch
               info "  Deleting local branch '${branch}'..."
               git branch -d "${branch}" >/dev/null 2>&1 || git branch -D "${branch}" >/dev/null 2>&1
