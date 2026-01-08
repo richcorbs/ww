@@ -5,14 +5,15 @@ A GitButler-inspired workflow using native git worktrees, allowing you to work o
 ## Features
 
 - **Dedicated staging branch**: All work happens in `worktree-staging`, keeping `main` clean
-- **File-level assignment**: Selectively assign files to different worktrees using two-letter abbreviations
+- **Interactive file selection**: Use fzf for visual multi-select file assignment
+- **File-level assignment**: Selectively assign files to different worktrees
 - **Directory assignment**: Assign all changed files in a directory or all files at once
 - **Selective staging**: Stage specific files in worktrees before committing
 - **Smart commits**: Automatically detects staged files and commits accordingly
 - **Commit tracking**: Track which commits have been applied between branches
 - **Safe operations**: Work in isolation without affecting your main branch
 - **Simple CLI**: Single `wt` command with intuitive subcommands
-- **Abbreviated commands**: Use short forms like `wt as` for `wt assign`, `wt ap` for `wt apply`
+- **Simplified worktree creation**: `wt create <branch>` - branch name is the worktree name
 
 ## Installation
 
@@ -21,6 +22,7 @@ A GitButler-inspired workflow using native git worktrees, allowing you to work o
 - Git 2.5 or higher
 - jq (JSON processor)
 - Bash 4+
+- fzf (fuzzy finder) - For interactive file selection
 - gh (GitHub CLI) - Optional, for PR links in status and `wt pr` command
 
 ### Install
@@ -50,39 +52,39 @@ wt init
 # 2. Make some changes
 # ... edit files ...
 
-# 3. Check status (see two-letter abbreviations)
+# 3. Check status
 wt status
 # Output:
 #   Working in: worktree-staging
 #
 #   Unassigned changes:
-#     ab  M  app/models/user.rb
-#     cd  A  app/controllers/sessions_controller.rb
-#     ef  A  app/controllers/passwords_controller.rb
+#     M  app/models/user.rb
+#     A  app/controllers/sessions_controller.rb
+#     A  app/controllers/passwords_controller.rb
 #
 #   Worktrees:
 #     (none)
 #
-#     Use 'wt create <name> <branch>' to create a worktree
+#     Use 'wt create <branch>' to create a worktree
 
 # 4. Create a worktree for a feature
-# Syntax: wt create <worktree-name> <branch> [optional-custom-path-to-worktree]
-wt create feature-auth feature/user-auth
+wt create feature/user-auth
 
-# 5. Assign files to the worktree
-wt assign ab feature-auth                # Single file by abbreviation
-wt assign app/controllers feature-auth   # All changed files in directory
-# OR assign all files at once
-wt assign . feature-auth
+# 5. Assign files to the worktree (opens interactive fzf selector)
+wt assign feature/user-auth
+# OR assign files directly:
+# wt assign feature/user-auth app/models/user.rb      # Single file
+# wt assign feature/user-auth app/controllers/        # Directory
+# wt assign feature/user-auth .                       # All files
 
 # 6. Commit changes in the worktree
-wt commit feature-auth "Add user authentication"
+wt commit feature/user-auth "Add user authentication"
 
 # 7. Push the feature branch
-wt push feature-auth
+wt push feature/user-auth
 
 # 8. Create pull request
-wt pr feature-auth  # Opens GitHub PR creation page in browser
+wt pr feature/user-auth  # Opens GitHub PR creation page in browser
 
 # 9. After PR is merged to main, sync worktree-staging
 wt sync
@@ -181,19 +183,17 @@ This is a convenient shortcut for `git checkout` with smart defaults:
 - If on `worktree-staging`: switches to `main`
 - If on any other branch: switches to `worktree-staging`
 
-### `wt create <name> <branch> [path]`
+### `wt create <branch>`
 
-Create a new worktree branching from `worktree-staging`.
+Create a new worktree branching from `worktree-staging`. The branch name is used as the worktree name.
 
 ```bash
-wt create feature-auth feature/user-auth
-wt create bugfix bugfix/issue-123 ~/my-worktrees/bugfix
+wt create feature/user-auth    # Creates .worktrees/feature/user-auth/
+wt create bugfix/issue-123     # Creates .worktrees/bugfix/issue-123/
 ```
 
 Arguments:
-- `name`: Identifier for the worktree
-- `branch`: Branch name for the worktree
-- `path`: Optional custom path (default: `.worktrees/<name>`)
+- `branch`: Branch name (also used as worktree name)
 
 ### `wt list`
 
@@ -203,62 +203,44 @@ List all worktrees with their status.
 wt list
 ```
 
-### `wt assign <file|abbreviation|directory|.> <worktree>`
+### `wt assign <worktree> [file|directory|.]`
 
-Assign files to a worktree and commit them to `worktree-staging`.
+Assign files to a worktree. Opens fzf for interactive multi-select if no file is specified.
 
 ```bash
-# Single file by abbreviation
-wt assign ab feature-auth
+# Interactive selection with fzf (recommended)
+wt assign feature/user-auth
 
-# Single file by path
-wt assign app/models/user.rb feature-auth
-
-# All changed files in a directory
-wt assign app/models/ feature-auth
-
-# All uncommitted changes
-wt assign . feature-auth
+# Or specify files directly:
+wt assign feature/user-auth app/models/user.rb    # Single file
+wt assign feature/user-auth app/models/           # Directory
+wt assign feature/user-auth .                     # All files
 ```
 
-The files are:
-1. Committed to `worktree-staging`
-2. Copied as uncommitted changes to the worktree
-3. Removed from "unassigned" list
+What happens:
+1. Files remain in `worktree-staging` (committed)
+2. Changes are copied to the worktree (uncommitted)
+3. Files are removed from "unassigned" list
 
-### `wt stage <worktree> <file|abbreviation|directory|.>`
+### `wt stage <worktree> <file|directory|.>`
 
 Stage files in a worktree for selective commits.
 
 ```bash
-# Stage single file by path
-wt stage feature-auth app/models/user.rb
-
-# Stage single file by abbreviation
-wt stage feature-auth gh
-
-# Stage all files in directory
-wt stage feature-auth app/models/
-
-# Stage all files
-wt stage feature-auth .
+wt stage feature/user-auth app/models/user.rb    # Single file
+wt stage feature/user-auth app/models/           # Directory
+wt stage feature/user-auth .                     # All files
 ```
 
 Use this when you want to commit only specific files from a worktree.
 
-### `wt unstage <worktree> <file|abbreviation|.>`
+### `wt unstage <worktree> <file|.>`
 
 Unstage files in a worktree (equivalent to git reset). Removes files from the staging area but keeps the changes as uncommitted.
 
 ```bash
-# Unstage single file by path
-wt unstage feature-auth app/models/user.rb
-
-# Unstage single file by abbreviation
-wt unstage feature-auth gh
-
-# Unstage all files
-wt unstage feature-auth .
+wt unstage feature/user-auth app/models/user.rb    # Single file
+wt unstage feature/user-auth .                     # All files
 ```
 
 This is the opposite of `wt stage` - useful when you've staged files but want to unstage them without losing changes.
@@ -268,7 +250,7 @@ This is the opposite of `wt stage` - useful when you've staged files but want to
 Commit changes in a worktree without having to cd into it.
 
 ```bash
-wt commit feature-auth "Add user authentication"
+wt commit feature/user-auth "Add user authentication"
 ```
 
 The commit command is staging-aware:
@@ -281,22 +263,16 @@ The commit command is staging-aware:
 Uncommit the last commit in a worktree (brings changes back to uncommitted).
 
 ```bash
-wt uncommit feature-auth
+wt uncommit feature/user-auth
 ```
 
-### `wt unassign <file|abbreviation|.> <worktree>`
+### `wt unassign <worktree> <file|.>`
 
 Unassign file(s) from a worktree - reverts the commit in `worktree-staging` and removes changes from the worktree.
 
 ```bash
-# Single file by abbreviation
-wt unassign ab feature-auth
-
-# Single file by path
-wt unassign app/models/user.rb feature-auth
-
-# All files assigned to worktree
-wt unassign . feature-auth
+wt unassign feature/user-auth app/models/user.rb    # Single file
+wt unassign feature/user-auth .                     # All assigned files
 ```
 
 The file(s) will show up as "unassigned" again.
@@ -384,9 +360,9 @@ $ wt init
   ✓ Worktree workflow initialized
 
 # Create feature worktree
-$ wt create auth feature/auth
+$ wt create feature/auth
 
-  ✓ Created worktree 'auth' at .worktrees/auth
+  ✓ Created worktree 'feature/auth' at .worktrees/feature/auth
   ✓ Branched from worktree-staging as feature/auth
 
 # Make changes in worktree-staging
@@ -397,41 +373,36 @@ $ wt status
   Working in: worktree-staging
 
   Unassigned changes:
-    ab  M  app/models/user.rb
-    cd  A  app/controllers/auth_controller.rb
+    M  app/models/user.rb
+    A  app/controllers/auth_controller.rb
 
   Worktrees:
-    auth (feature/auth) - 0 uncommitted, 0 commit(s)
+    feature/auth (feature/auth) - 0 uncommitted, 0 commit(s)
 
-# Assign files (commits to worktree-staging)
-$ wt assign ab auth
+# Assign files interactively with fzf
+$ wt assign feature/auth
 
-  ✓ Committed 'app/models/user.rb' to worktree-staging
-  ✓ Copied to worktree 'auth'
-  ✓ Assigned app/models/user.rb to auth
+  Select files to assign (TAB to select, ENTER to confirm)...
+  # fzf opens, select both files
 
-$ wt assign cd auth
-
-  ✓ Committed 'app/controllers/auth_controller.rb' to worktree-staging
-  ✓ Copied to worktree 'auth'
-  ✓ Assigned app/controllers/auth_controller.rb to auth
+  ✓ Assigned 2 file(s) to 'feature/auth' and committed to worktree-staging
 
 # Commit in worktree
-$ wt commit auth "Add authentication"
+$ wt commit feature/auth "Add authentication"
 
   No files staged, auto-staging all changes...
-  ✓ Committed changes in 'auth'
+  ✓ Committed changes in 'feature/auth'
 
 # Push and create PR
-$ wt push auth
+$ wt push feature/auth
 
   ✓ Pushed branch 'feature/auth' to origin
 
-$ wt pr auth
+$ wt pr feature/auth
 
   Opening PR creation page for branch 'feature/auth'...
   URL: https://github.com/user/repo/compare/main...feature/auth?expand=1
-  ✓ PR page opened for 'auth'
+  ✓ PR page opened for 'feature/auth'
 
 # After PR is merged to main, sync
 $ wt sync
@@ -444,9 +415,9 @@ $ wt sync
   Checking for merged branches...
 
   Branch 'feature/auth' has been merged into main
-    Removing worktree 'auth'...
+    Removing worktree 'feature/auth'...
     Deleting remote branch 'feature/auth'...
-    ✓ Cleaned up 'auth'
+    ✓ Cleaned up 'feature/auth'
 
   ✓ Cleaned up 1 merged worktree(s)
 ```
@@ -454,88 +425,74 @@ $ wt sync
 ### Working on Multiple Features
 
 ```bash
-wt create auth feature/auth
-wt create api feature/api-refactor
+wt create feature/auth
+wt create feature/api-refactor
 
 # Make changes
 # ... edit multiple files ...
 
-wt status
-# Output:
-#   ab app/models/user.rb
-#   cd app/controllers/api/base_controller.rb
-#   ef app/services/auth_service.rb
-
-# Assign to different features
-wt assign ab auth
-wt assign ef auth
-wt assign cd api
+# Assign to different features using fzf
+wt assign feature/auth         # Select auth-related files
+wt assign feature/api-refactor # Select API files
 
 # Commit separately
-wt commit auth "Add authentication"
-wt commit api "Refactor API base"
+wt commit feature/auth "Add authentication"
+wt commit feature/api-refactor "Refactor API base"
 
 # Push and create PRs
-wt push auth
-wt pr auth
-
-wt push api
-wt pr api
+wt pr feature/auth
+wt pr feature/api-refactor
 ```
 
 ### Assigning Directories
 
 ```bash
-wt create refactor feature/model-refactor
+wt create feature/model-refactor
 
 # Make changes to multiple files in app/models/
 # ... edit files ...
 
 # Assign entire directory
-wt assign app/models refactor
+wt assign feature/model-refactor app/models/
 
 # Commit
-wt commit refactor "Refactor models"
+wt commit feature/model-refactor "Refactor models"
 ```
 
 ### Selective Staging and Commits
 
 ```bash
-wt create feature-x feature/multi-part
+wt create feature/multi-part
 
-# Assign multiple files to the worktree
-wt assign ab feature-x
-wt assign cd feature-x
-wt assign ef feature-x
+# Assign files interactively
+wt assign feature/multi-part
 
 # Stage and commit only specific files
-wt stage feature-x app/models/user.rb
-wt commit feature-x "Add user model"
+wt stage feature/multi-part app/models/user.rb
+wt commit feature/multi-part "Add user model"
 
 # Stage and commit remaining files
-wt stage feature-x .
-wt commit feature-x "Add controllers and views"
+wt stage feature/multi-part .
+wt commit feature/multi-part "Add controllers and views"
 ```
 
 Or commit everything at once without staging:
 ```bash
 # If no files are staged, commit auto-stages all changes
-wt commit feature-x "Implement complete feature"
+wt commit feature/multi-part "Implement complete feature"
 ```
 
 ### Undoing Mistakes
 
 ```bash
 # Assigned wrong file
-wt unassign ab feature-auth
+wt unassign feature/user-auth app/models/admin.rb
 
 # Committed too early in worktree
-wt uncommit feature-auth
+wt uncommit feature/user-auth
 
-# Made a mistake in assignment, uncommit and reassign
-wt unassign app/models/user.rb feature-auth
-# ... make corrections ...
-wt assign app/models/user.rb feature-auth
+# Unassign all files from a worktree
+wt unassign feature/user-auth .
 ```
 
 ### Syncing After Merges
