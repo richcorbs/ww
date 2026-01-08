@@ -147,4 +147,7 @@ cmd_pr() {
   fi
 
   success "PR page opened for '${worktree_name}'"
+  echo ""
+  source "${WT_ROOT}/commands/status.sh"
+  cmd_status
 }
