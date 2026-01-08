@@ -134,7 +134,8 @@ cmd_unassign() {
 
   local filepath="$file_or_abbrev"
   local commit_sha=""
-  local commit_msg="wt: assign ${filepath} to ${worktree_name}"
+  local commit_msg
+  commit_msg=$(assignment_commit_message "$filepath" "$worktree_name")
 
   # Search recent commits for the assignment
   while IFS= read -r sha; do

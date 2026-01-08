@@ -148,7 +148,7 @@ cmd_commit() {
     info "Select files to commit (TAB to select, ENTER to confirm)..."
 
     local selected_files
-    selected_files=$(echo "$file_list" | fzf --multi --height=40% --border --prompt="Select files for commit> " --bind=ctrl-j:down,ctrl-k:up,ctrl-d:half-page-down,ctrl-u:half-page-up | sed 's/^..  //' | sed 's/ \[S\]$//')
+    selected_files=$(echo "$file_list" | run_fzf "Select files for commit" | sed 's/^..  //' | sed 's/ \[S\]$//')
 
     if [[ -z "$selected_files" ]]; then
       popd > /dev/null 2>&1

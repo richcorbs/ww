@@ -109,13 +109,8 @@ cmd_sync() {
           worktree_path=$(get_worktree_path "$name")
           local abs_path="${repo_root}/${worktree_path}"
 
-          local uncommitted_count=0
-          if [[ -d "$abs_path" ]]; then
-            if pushd "$abs_path" > /dev/null 2>&1; then
-              uncommitted_count=$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')
-              popd > /dev/null 2>&1
-            fi
-          fi
+          local uncommitted_count
+          uncommitted_count=$(get_worktree_uncommitted_count "$abs_path")
 
           if [[ "$uncommitted_count" -gt 0 ]]; then
             # Has uncommitted changes - recreate branch from updated wt-working

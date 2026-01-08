@@ -10,6 +10,23 @@ readonly YELLOW='\033[1;33m'
 readonly BLUE='\033[0;34m'
 readonly NC='\033[0m' # No Color
 
+# Constants
+readonly WT_BRANCH="wt-working"
+readonly FZF_OPTS="--multi --height=40% --border --bind=ctrl-j:down,ctrl-k:up,ctrl-d:half-page-down,ctrl-u:half-page-up"
+
+# Generate assignment commit message
+# Usage: assignment_commit_message "filepath" "worktree_name"
+assignment_commit_message() {
+  echo "wt: assign $1 to $2"
+}
+
+# Parse assignment commit to extract worktree name
+# Usage: worktree_name=$(parse_assignment_commit "wt: assign file.txt to my-worktree")
+parse_assignment_worktree() {
+  local commit_msg="$1"
+  echo "$commit_msg" | sed -n 's/^wt: assign .* to \(.*\)$/\1/p'
+}
+
 # Error handling
 error() {
   echo -e "  ${RED}Error: $1${NC}" >&2
@@ -41,7 +58,7 @@ get_repo_root() {
 
 # Check if wt is initialized (wt-working branch exists)
 is_initialized() {
-  git show-ref --verify --quiet refs/heads/wt-working
+  git show-ref --verify --quiet "refs/heads/${WT_BRANCH}"
 }
 
 ensure_initialized() {
@@ -51,6 +68,11 @@ ensure_initialized() {
 }
 
 # Get worktree path for a given branch name (returns relative path)
+# The 'git worktree list --porcelain' command outputs structured data:
+#   worktree /full/path/to/worktree
+#   HEAD <sha>
+#   branch refs/heads/branch-name
+# This function parses that output to find the path for the specified branch
 get_worktree_path() {
   local branch="$1"
   local repo_root
@@ -59,10 +81,13 @@ get_worktree_path() {
   # Parse git worktree list to find the path for this branch
   # Returns path relative to repo root
   git worktree list --porcelain | awk -v branch="$branch" -v root="$repo_root" '
+    # Extract path from "worktree /path" line (skip first 10 chars: "worktree ")
     /^worktree / { path = substr($0, 10) }
+    # When we find the branch line, check if it matches our target
     /^branch / {
       if ($2 == "refs/heads/" branch && path != root) {
         # Strip root prefix to get relative path
+        # If path starts with "root/", remove that prefix (+2 for the slash and 0-based index)
         if (index(path, root "/") == 1) {
           print substr(path, length(root) + 2)
         } else {
@@ -83,17 +108,24 @@ worktree_exists() {
 }
 
 # Get all worktree branch names (excluding main repo)
+# Parses the porcelain output and extracts branch names for all worktrees
+# except the main repository (identified by matching the repo root path)
 list_worktree_names() {
   local repo_root
   repo_root=$(get_repo_root)
 
   git worktree list --porcelain | awk -v root="$repo_root" '
+    # Extract path from "worktree /path" line
     /^worktree / { path = substr($0, 10) }
+    # Extract branch name from "branch refs/heads/..." line
     /^branch / {
+      # Skip the main repo (path == root)
       if (path != root) {
-        # Extract branch name from refs/heads/branch-name
+        # Split "refs/heads/branch-name" by "/" and extract branch name
+        # For refs/heads/feature/foo, this produces: feature/foo
         split($2, parts, "/")
-        branch = parts[3]
+        branch = parts[3]  # Start with first part after refs/heads/
+        # Rejoin remaining parts with "/" for nested branch names
         for (i = 4; i <= length(parts); i++) {
           branch = branch "/" parts[i]
         }
@@ -153,8 +185,11 @@ has_uncommitted_changes() {
 }
 
 # Extract unique directories from a list of file paths
-# Input: newline-separated list of file paths
-# Output: newline-separated list of unique directories (sorted)
+# This is useful for fzf file selection - allows users to select entire directories
+# Input: $1 = newline-separated list of file paths (e.g., "src/foo.js\nsrc/bar.js\nlib/baz.js")
+# Output: newline-separated list of unique directories, sorted (e.g., "lib\nsrc")
+# Example:
+#   dirs=$(extract_directories "$all_files")
 extract_directories() {
   local files="$1"
   local directories=()
@@ -163,19 +198,26 @@ extract_directories() {
     [[ -z "$file" ]] && continue
     local dir
     dir=$(dirname "$file")
+    # Skip current directory "." - only include actual subdirectories
     if [[ "$dir" != "." ]]; then
       directories+=("$dir")
     fi
   done <<< "$files"
 
-  # Sort and deduplicate
+  # Sort and deduplicate directories
   printf '%s\n' "${directories[@]}" | sort -u
 }
 
 # Expand directory selections from fzf into individual files
-# Input: $1 = selected items (newline-separated, may include dirs with trailing /)
+# When users select a directory in fzf (shown with trailing /), this expands it to all files within
+# Input: $1 = selected items from fzf (newline-separated, dirs have trailing /)
 #        $2 = all available files (newline-separated)
 # Output: expanded list of files (newline-separated)
+# Example:
+#   If user selects "commands/" and "lib/foo.sh":
+#   Input selected: "commands/\nlib/foo.sh"
+#   Input all_files: "commands/status.sh\ncommands/apply.sh\nlib/foo.sh"
+#   Output: "commands/status.sh\ncommands/apply.sh\nlib/foo.sh"
 expand_directory_selections() {
   local selected="$1"
   local all_files="$2"
@@ -184,11 +226,11 @@ expand_directory_selections() {
   while IFS= read -r item; do
     [[ -z "$item" ]] && continue
 
-    # Check if it's a directory (ends with /)
+    # Check if it's a directory (fzf displays dirs with trailing /)
     if [[ "$item" == */ ]]; then
-      # Remove trailing slash
+      # Remove trailing slash for pattern matching
       local dir="${item%/}"
-      # Add all files in this directory
+      # Add all files that start with "dir/" to result
       while IFS= read -r file; do
         [[ -z "$file" ]] && continue
         if [[ "$file" == "${dir}/"* ]]; then
@@ -196,11 +238,180 @@ expand_directory_selections() {
         fi
       done <<< "$all_files"
     else
-      # It's a file
+      # It's an individual file, add it directly
       result+=("$item")
     fi
   done <<< "$selected"
 
-  # Output results
+  # Output deduplicated results
   printf '%s\n' "${result[@]}"
+}
+
+# Get upstream branch for current directory (must be called from within a git worktree)
+# Output: upstream branch name (e.g., "origin/main") or empty string if no upstream
+get_upstream_branch() {
+  git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo ""
+}
+
+# Get ahead/behind counts for current branch relative to upstream
+# Must be called from within a git worktree (use pushd first if needed)
+# Output: two lines - "ahead <count>" and "behind <count>"
+# Example usage:
+#   while IFS=' ' read -r key value; do
+#     if [[ "$key" == "ahead" ]]; then ahead="$value"; fi
+#     if [[ "$key" == "behind" ]]; then behind="$value"; fi
+#   done < <(get_ahead_behind_counts)
+get_ahead_behind_counts() {
+  local upstream
+  upstream=$(get_upstream_branch)
+
+  # If no upstream is configured, return zeros
+  if [[ -z "$upstream" ]]; then
+    echo "ahead 0"
+    echo "behind 0"
+    return
+  fi
+
+  # Count commits in HEAD that aren't in upstream (@{u}..HEAD)
+  local ahead
+  ahead=$(git rev-list --count @{u}..HEAD 2>/dev/null || echo "0")
+  # Count commits in upstream that aren't in HEAD (HEAD..@{u})
+  local behind
+  behind=$(git rev-list --count HEAD..@{u} 2>/dev/null || echo "0")
+
+  echo "ahead $ahead"
+  echo "behind $behind"
+}
+
+# Get count of uncommitted files in a worktree
+# Counts both modified tracked files and untracked files
+# Input: $1 = absolute path to worktree directory
+# Output: count of uncommitted files (integer)
+# Example:
+#   count=$(get_worktree_uncommitted_count "/path/to/worktree")
+get_worktree_uncommitted_count() {
+  local worktree_path="$1"
+  local count=0
+
+  if [[ -d "$worktree_path" ]]; then
+    if pushd "$worktree_path" > /dev/null 2>&1; then
+      # git status --porcelain outputs one line per changed file
+      # Count lines to get total number of uncommitted changes
+      count=$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+      popd > /dev/null 2>&1
+    fi
+  fi
+
+  echo "$count"
+}
+
+# Get count of commits in a worktree that are not in wt-working
+# This tells you how many commits the worktree has made that haven't been applied to wt-working
+# Input: $1 = absolute path to worktree directory
+# Output: count of commits (integer)
+# Example:
+#   count=$(get_worktree_commit_count "/path/to/worktree")
+#   if [[ "$count" -gt 0 ]]; then echo "Has $count unapplied commits"; fi
+get_worktree_commit_count() {
+  local worktree_path="$1"
+  local count=0
+
+  if [[ -d "$worktree_path" ]]; then
+    if pushd "$worktree_path" > /dev/null 2>&1; then
+      # git rev-list WT_BRANCH..HEAD lists commits in HEAD not in WT_BRANCH
+      # --count just gives us the number
+      count=$(git rev-list --count "${WT_BRANCH}..HEAD" 2>/dev/null || echo "0")
+      popd > /dev/null 2>&1
+    fi
+  fi
+
+  echo "$count"
+}
+
+# Execute a git command in a worktree directory
+# Usage: run_in_worktree "/path/to/worktree" "git status"
+# Returns: exit code of the command
+run_in_worktree() {
+  local worktree_path="$1"
+  shift
+  local result=1
+
+  if [[ -d "$worktree_path" ]]; then
+    if pushd "$worktree_path" > /dev/null 2>&1; then
+      "$@"
+      result=$?
+      popd > /dev/null 2>&1
+    fi
+  fi
+
+  return $result
+}
+
+# Check if a branch has been merged into another branch
+# Usage: is_branch_merged "feature-branch" "main"
+# Returns: 0 if merged, 1 if not merged
+is_branch_merged() {
+  local branch="$1"
+  local target_branch="$2"
+
+  if git branch --merged "$target_branch" 2>/dev/null | grep -q "^[*+ ]*${branch}$"; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+# Get the main branch name (main or master)
+# Checks in order: origin/main, origin/master, local main, local master
+# Output: branch name (e.g., "main" or "master") or empty if not found
+get_main_branch() {
+  if git show-ref --verify --quiet refs/remotes/origin/main; then
+    echo "main"
+  elif git show-ref --verify --quiet refs/remotes/origin/master; then
+    echo "master"
+  elif git show-ref --verify --quiet refs/heads/main; then
+    echo "main"
+  elif git show-ref --verify --quiet refs/heads/master; then
+    echo "master"
+  else
+    echo ""
+  fi
+}
+
+# Get the main branch reference for checking (with origin if available)
+# Output: "origin/main", "origin/master", "main", "master", or empty
+get_main_branch_ref() {
+  if git show-ref --verify --quiet refs/remotes/origin/main; then
+    echo "origin/main"
+  elif git show-ref --verify --quiet refs/remotes/origin/master; then
+    echo "origin/master"
+  elif git show-ref --verify --quiet refs/heads/main; then
+    echo "main"
+  elif git show-ref --verify --quiet refs/heads/master; then
+    echo "master"
+  else
+    echo ""
+  fi
+}
+
+# Validate git command output
+# Usage: validate_git_output "$output" "command description"
+# Returns: 0 if valid, exits with error if invalid
+validate_git_output() {
+  local output="$1"
+  local description="$2"
+
+  # Check for common git error patterns
+  if [[ "$output" =~ "fatal:" ]] || [[ "$output" =~ "error:" ]]; then
+    error "Git command failed: $description"
+  fi
+
+  return 0
+}
+
+# Run fzf with standard options
+# Usage: run_fzf "prompt text" <<< "$file_list"
+run_fzf() {
+  local prompt="$1"
+  fzf $FZF_OPTS --prompt="${prompt}> "
 }

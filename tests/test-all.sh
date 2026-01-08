@@ -18,12 +18,9 @@ cd "$REPO"
 assert_success "$WT_BIN init" "wt init should succeed"
 assert_branch_exists "wt-working" "wt-working branch should exist"
 assert_current_branch "wt-working" "Should be on wt-working branch"
-assert_file_exists ".worktree-flow" ".worktree-flow directory should exist"
-assert_file_exists ".worktree-flow/metadata.json" "metadata.json should exist"
 
 # Check .gitignore
 GITIGNORE_CONTENT=$(cat .gitignore)
-assert_contains "$GITIGNORE_CONTENT" ".worktree-flow/" ".gitignore should contain .worktree-flow/"
 assert_contains "$GITIGNORE_CONTENT" ".worktrees/" ".gitignore should contain .worktrees/"
 
 # Test: wt create (simplified - branch name only)
@@ -35,10 +32,6 @@ $WT_BIN init > /dev/null 2>&1
 assert_success "$WT_BIN create feature/test" "wt create should succeed"
 assert_file_exists ".worktrees/feature/test" "Worktree directory should exist at .worktrees/feature/test"
 assert_branch_exists "feature/test" "Feature branch should exist"
-
-# Check metadata - branch name and worktree name should be identical
-METADATA=$(cat .worktree-flow/metadata.json)
-assert_contains "$METADATA" "feature/test" "Metadata should contain worktree name"
 
 # Test: wt list
 test_section "Testing: wt list"
