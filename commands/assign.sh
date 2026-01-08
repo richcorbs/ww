@@ -192,9 +192,10 @@ cmd_assign() {
     files_to_assign+=("$file_or_pattern")
   fi
 
-  # Verify files exist and have changes
+  # Verify files exist or are deleted/changed in git
   for filepath in "${files_to_assign[@]}"; do
-    if [[ ! -f "$filepath" ]] && ! git ls-files --error-unmatch "$filepath" > /dev/null 2>&1; then
+    # Check if file exists, or is tracked by git, or is in git status (including deletions)
+    if [[ ! -f "$filepath" ]] && ! git ls-files --error-unmatch "$filepath" > /dev/null 2>&1 && ! git status --porcelain "$filepath" 2>/dev/null | grep -q '^.'; then
       error "File '$filepath' not found in repository"
     fi
   done
@@ -254,10 +255,16 @@ cmd_assign() {
 
   if [[ $assigned_count -eq ${#files_to_assign[@]} ]]; then
     success "Assigned ${assigned_count} file(s) to '${worktree_name}' and committed to worktree-staging"
-    exit 0
+    echo ""
+    # Show updated status
+    source "${WT_ROOT}/commands/status.sh"
+    cmd_status
   elif [[ $assigned_count -gt 0 ]]; then
     warn "Assigned ${assigned_count} of ${#files_to_assign[@]} file(s) to '${worktree_name}'"
-    exit 0
+    echo ""
+    # Show updated status
+    source "${WT_ROOT}/commands/status.sh"
+    cmd_status
   else
     error "Failed to assign files"
   fi
