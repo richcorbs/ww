@@ -115,7 +115,7 @@ cmd_sync() {
 
             # Delete local branch
             info "  Deleting local branch '${branch}'..."
-            git branch -d "${branch}" 2>/dev/null || git branch -D "${branch}" 2>/dev/null
+            git branch -d "${branch}" >/dev/null 2>&1 || git branch -D "${branch}" >/dev/null 2>&1
 
             # Delete remote branch if it exists
             if git ls-remote --exit-code --heads origin "${branch}" >/dev/null 2>&1; then
