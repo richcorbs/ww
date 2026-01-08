@@ -3,19 +3,21 @@
 
 show_help() {
   cat <<EOF
-Usage: wt commit <worktree> [message]
+Usage: wt commit [worktree] [message]
 
 Commit changes in a worktree using interactive file selection.
 Always opens fzf to select files to commit. Staged files are marked with [S].
+If worktree is not provided, fzf will show a list of all worktrees.
 
 Arguments:
-  worktree    Name of the worktree
+  worktree    Name of the worktree (optional - will prompt with fzf)
   message     Optional commit message (pre-fills prompt if provided)
 
 Options:
   -h, --help    Show this help message
 
 Examples:
+  wt commit                                          # Select worktree, then files, then message
   wt commit feature-auth "Add user authentication"  # Selects files, pre-fills message
   wt commit feature-auth                             # Selects files, prompts for message
 EOF
@@ -46,14 +48,17 @@ cmd_commit() {
     shift
   done
 
-  # Validate arguments
-  if [[ -z "$worktree_name" ]]; then
-    error "Missing required argument: worktree"
-  fi
-
   # Ensure initialized
   ensure_git_repo
   ensure_initialized
+
+  # Validate arguments - use fzf if worktree not provided
+  if [[ -z "$worktree_name" ]]; then
+    worktree_name=$(select_worktree_interactive)
+    if [[ -z "$worktree_name" ]]; then
+      error "No worktree selected"
+    fi
+  fi
 
   # Check if worktree exists
   if ! worktree_exists "$worktree_name"; then

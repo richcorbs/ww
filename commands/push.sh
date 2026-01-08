@@ -3,19 +3,21 @@
 
 show_help() {
   cat <<EOF
-Usage: wt push <worktree>
+Usage: wt push [worktree]
 
 Push the worktree's branch to the remote repository.
 Sets upstream if not already configured.
+If worktree is not provided, fzf will show a list of all worktrees.
 
 Arguments:
-  worktree    Name of the worktree
+  worktree    Name of the worktree (optional - will prompt with fzf)
 
 Options:
   -h, --help    Show this help message
 
-Example:
-  wt push feature-auth
+Examples:
+  wt push                # Select worktree interactively
+  wt push feature-auth   # Push specific worktree
 EOF
 }
 
@@ -40,14 +42,17 @@ cmd_push() {
     shift
   done
 
-  # Validate arguments
-  if [[ -z "$worktree_name" ]]; then
-    error "Missing required argument: worktree"
-  fi
-
   # Ensure initialized
   ensure_git_repo
   ensure_initialized
+
+  # Validate arguments - use fzf if worktree not provided
+  if [[ -z "$worktree_name" ]]; then
+    worktree_name=$(select_worktree_interactive)
+    if [[ -z "$worktree_name" ]]; then
+      error "No worktree selected"
+    fi
+  fi
 
   # Check if worktree exists
   if ! worktree_exists "$worktree_name"; then

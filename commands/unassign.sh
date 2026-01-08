@@ -3,23 +3,28 @@
 
 show_help() {
   cat <<EOF
-Usage: wt unassign <worktree> [file|.]
+Usage: wt unassign [worktree] [file|.]
 
 Unassign file(s) from a worktree by reverting their commits in wt-working
 and removing the changes from the worktree. The files will show up as
 "unassigned" again.
 
+If worktree is not provided, fzf will show a list of all worktrees.
+If file is not provided, fzf will show a list of all assigned files.
+
 Arguments:
-  worktree     Name of the worktree
+  worktree     Name of the worktree (optional - will prompt with fzf)
   file|.|      Optional: File path, directory, or . for all assigned files
+               (will prompt with fzf if not provided)
 
 Options:
   -h, --help    Show this help message
 
 Examples:
-  wt unassign feature-auth                    # Unassign all files
+  wt unassign                                 # Select worktree and file interactively
+  wt unassign feature-auth                    # Select file from feature-auth
   wt unassign feature-auth app/models/user.rb # Single file by path
-  wt unassign feature-auth .                  # All uncommitted files assigned to the worktree
+  wt unassign feature-auth .                  # All files assigned to the worktree
 EOF
 }
 
@@ -47,16 +52,6 @@ cmd_unassign() {
     shift
   done
 
-  # Validate arguments
-  if [[ -z "$worktree_name" ]]; then
-    error "Missing required argument: worktree"
-  fi
-
-  # Default to all files if no file specified
-  if [[ -z "$file_or_abbrev" ]]; then
-    file_or_abbrev="."
-  fi
-
   # Ensure initialized
   ensure_git_repo
   ensure_initialized
@@ -64,13 +59,34 @@ cmd_unassign() {
   # Ensure on wt-working
   local current_branch
   current_branch=$(git branch --show-current)
-  if [[ "$current_branch" != "wt-working" ]]; then
-    error "Must be on wt-working branch to unassign. Current branch: ${current_branch}"
+  if [[ "$current_branch" != "${WT_BRANCH}" ]]; then
+    error "Must be on ${WT_BRANCH} branch to unassign. Current branch: ${current_branch}"
+  fi
+
+  # Validate arguments - use fzf if worktree not provided
+  if [[ -z "$worktree_name" ]]; then
+    worktree_name=$(select_worktree_interactive)
+    if [[ -z "$worktree_name" ]]; then
+      error "No worktree selected"
+    fi
   fi
 
   # Check if worktree exists
   if ! worktree_exists "$worktree_name"; then
     error "Worktree '$worktree_name' not found"
+  fi
+
+  # Use fzf to select file if not specified (and fzf is available and we're interactive)
+  if [[ -z "$file_or_abbrev" ]]; then
+    if command -v fzf > /dev/null 2>&1 && [[ -t 0 ]]; then
+      file_or_abbrev=$(select_assigned_file_interactive "$worktree_name")
+      if [[ -z "$file_or_abbrev" ]]; then
+        error "No file selected"
+      fi
+    else
+      # Default to all files if not interactive or fzf not available
+      file_or_abbrev="."
+    fi
   fi
 
   # Check for unassigned changes in wt-working

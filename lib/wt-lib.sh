@@ -415,3 +415,161 @@ run_fzf() {
   local prompt="$1"
   fzf $FZF_OPTS --prompt="${prompt}> "
 }
+
+# Get a summary line for a worktree (for fzf display)
+# Input: $1 = worktree name
+# Output: formatted status string like "  - 3 uncommitted, 2 commits [not applied] [2 ahead]"
+get_worktree_status_summary() {
+  local name="$1"
+  local repo_root
+  repo_root=$(get_repo_root)
+
+  local path
+  path=$(get_worktree_path "$name")
+
+  if [[ -z "$path" ]]; then
+    echo " - MISSING"
+    return
+  fi
+
+  local abs_path="${repo_root}/${path}"
+
+  if [[ ! -d "$abs_path" ]]; then
+    echo " - MISSING"
+    return
+  fi
+
+  # Get uncommitted count
+  local uncommitted_count
+  uncommitted_count=$(get_worktree_uncommitted_count "$abs_path")
+
+  # Get commit count
+  local commit_count
+  commit_count=$(get_worktree_commit_count "$abs_path")
+
+  # Check for assignment commits
+  local applied_status=""
+  local assignment_commits
+  assignment_commits=$(git log ${WT_BRANCH} --oneline --grep="wt: assign .* to ${name}" --max-count=50 2>/dev/null || echo "")
+
+  if [[ -n "$assignment_commits" ]]; then
+    applied_status=" [applied]"
+  elif [[ "$commit_count" -gt 0 ]]; then
+    applied_status=" [not applied]"
+  fi
+
+  # Get push status
+  local push_status=""
+  if [[ "$commit_count" -gt 0 ]]; then
+    if pushd "$abs_path" > /dev/null 2>&1; then
+      local upstream
+      upstream=$(get_upstream_branch)
+
+      if [[ -n "$upstream" ]]; then
+        local ahead behind
+        while IFS=' ' read -r key value; do
+          if [[ "$key" == "ahead" ]]; then
+            ahead="$value"
+          elif [[ "$key" == "behind" ]]; then
+            behind="$value"
+          fi
+        done < <(get_ahead_behind_counts)
+
+        if [[ "$ahead" -gt 0 ]]; then
+          push_status=" [${ahead} ahead]"
+        fi
+      else
+        push_status=" [not pushed]"
+      fi
+      popd > /dev/null 2>&1
+    fi
+  fi
+
+  # Build status parts
+  local status_parts=()
+  if [[ "$uncommitted_count" -gt 0 ]]; then
+    status_parts+=("${uncommitted_count} uncommitted")
+  fi
+  if [[ "$commit_count" -gt 0 ]]; then
+    status_parts+=("${commit_count} commit(s)")
+  fi
+
+  # Build final status string
+  local status_str=""
+  if [[ ${#status_parts[@]} -gt 0 ]]; then
+    status_str=" - $(IFS=", "; echo "${status_parts[*]}")${applied_status}${push_status}"
+  elif [[ -n "$push_status" ]] || [[ -n "$applied_status" ]]; then
+    status_str="${applied_status}${push_status}"
+  else
+    status_str=" - EMPTY"
+  fi
+
+  echo "$status_str"
+}
+
+# Select worktree interactively with fzf
+# Shows worktree status information for context
+# Returns: selected worktree name (just the name, not the status)
+# Usage: worktree=$(select_worktree_interactive)
+select_worktree_interactive() {
+  if ! command -v fzf > /dev/null 2>&1; then
+    error "fzf is required for interactive selection. Install fzf or specify worktree name directly."
+  fi
+
+  local names
+  names=$(list_worktree_names)
+
+  if [[ -z "$names" ]]; then
+    error "No worktrees available. Create one with 'wt create <name>'"
+  fi
+
+  # Build worktree list with status
+  local worktree_list=""
+  while IFS= read -r name; do
+    local status
+    status=$(get_worktree_status_summary "$name")
+    worktree_list+="${name}${status}"$'\n'
+  done <<< "$names"
+
+  # Run fzf and extract just the worktree name (first field)
+  echo "$worktree_list" | run_fzf "Select worktree" | awk '{print $1}'
+}
+
+# Select an assigned file from a worktree interactively with fzf
+# Shows files that have been assigned to this worktree (via assignment commits)
+# Input: $1 = worktree name
+# Returns: selected file path
+# Usage: file=$(select_assigned_file_interactive "worktree-name")
+select_assigned_file_interactive() {
+  local worktree_name="$1"
+
+  if ! command -v fzf > /dev/null 2>&1; then
+    error "fzf is required for interactive selection. Install fzf or specify file path directly."
+  fi
+
+  # Find all assignment commits for this worktree
+  local assigned_files=""
+  while IFS= read -r sha; do
+    if [[ -n "$sha" ]]; then
+      # Get the commit message
+      local msg
+      msg=$(git log -1 --format="%s" "$sha" 2>/dev/null)
+
+      # Extract filename from "wt: assign <filename> to <worktree>" format
+      # Using sed to extract the part between "assign " and " to"
+      local filename
+      filename=$(echo "$msg" | sed -n 's/^wt: assign \(.*\) to .*$/\1/p')
+
+      if [[ -n "$filename" ]]; then
+        assigned_files+="${filename}"$'\n'
+      fi
+    fi
+  done < <(git log --format="%H" --grep="wt: assign .* to ${worktree_name}$" ${WT_BRANCH} --max-count=100 2>/dev/null)
+
+  if [[ -z "$assigned_files" ]]; then
+    error "No files assigned to '${worktree_name}'"
+  fi
+
+  # Show files in fzf
+  echo "$assigned_files" | run_fzf "Select file to unassign"
+}

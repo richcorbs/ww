@@ -46,14 +46,17 @@ cmd_remove() {
     shift
   done
 
-  # Validate arguments
-  if [[ -z "$worktree_name" ]]; then
-    error "Missing required argument: worktree"
-  fi
-
   # Ensure initialized
   ensure_git_repo
   ensure_initialized
+
+  # Validate arguments - use fzf if worktree not provided
+  if [[ -z "$worktree_name" ]]; then
+    worktree_name=$(select_worktree_interactive)
+    if [[ -z "$worktree_name" ]]; then
+      error "No worktree selected"
+    fi
+  fi
 
   # Check if worktree exists
   if ! worktree_exists "$worktree_name"; then
