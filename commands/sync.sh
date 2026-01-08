@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Sync worktree-staging with main
+# Sync wt-working with main
 
 show_help() {
   cat <<EOF
 Usage: wt sync [branch]
 
-Sync worktree-staging with changes from another branch (default: main).
-Merges the specified branch into worktree-staging to keep it up-to-date.
+Sync wt-working with changes from another branch (default: main).
+Merges the specified branch into wt-working to keep it up-to-date.
 Automatically detects and cleans up worktrees whose branches have been merged.
 
 Arguments:
@@ -18,7 +18,7 @@ Options:
 What it does:
   1. Fetches latest changes from origin
   2. Updates local branch from origin
-  3. Merges branch into worktree-staging
+  3. Merges branch into wt-working
   4. Detects worktrees with merged branches
   5. Removes merged worktrees automatically
   6. Deletes corresponding remote branches
@@ -50,12 +50,12 @@ cmd_sync() {
   ensure_git_repo
   ensure_initialized
 
-  # Ensure on worktree-staging
+  # Ensure on wt-working
   local current_branch
   current_branch=$(git branch --show-current)
-  if [[ "$current_branch" != "worktree-staging" ]]; then
-    warn "Not on worktree-staging branch, checking it out..."
-    git checkout worktree-staging
+  if [[ "$current_branch" != "wt-working" ]]; then
+    warn "Not on wt-working branch, checking it out..."
+    git checkout wt-working
   fi
 
   # Check if source branch exists
@@ -63,7 +63,7 @@ cmd_sync() {
     error "Branch '${source_branch}' does not exist"
   fi
 
-  info "Syncing worktree-staging with '${source_branch}'..."
+  info "Syncing wt-working with '${source_branch}'..."
 
   # Fetch latest changes
   if git remote get-url origin > /dev/null 2>&1; then
@@ -75,9 +75,9 @@ cmd_sync() {
     git fetch origin "${source_branch}:${source_branch}" >/dev/null 2>&1 || warn "Failed to update local ${source_branch}"
   fi
 
-  # Merge source branch into worktree-staging
+  # Merge source branch into wt-working
   if git merge --no-edit "${source_branch}" >/dev/null 2>&1; then
-    success "Successfully synced worktree-staging with '${source_branch}'"
+    success "Successfully synced wt-working with '${source_branch}'"
 
     # Show summary
     local merge_commit
@@ -118,16 +118,16 @@ cmd_sync() {
           fi
 
           if [[ "$uncommitted_count" -gt 0 ]]; then
-            # Has uncommitted changes - recreate branch from updated worktree-staging
+            # Has uncommitted changes - recreate branch from updated wt-working
             info "  Worktree '${name}' has ${uncommitted_count} uncommitted change(s)"
-            info "  Recreating branch '${branch}' from updated worktree-staging..."
+            info "  Recreating branch '${branch}' from updated wt-working..."
 
             # Delete old branch
             git branch -D "${branch}" >/dev/null 2>&1
 
-            # Create new branch from worktree-staging in the worktree
+            # Create new branch from wt-working in the worktree
             if pushd "$abs_path" > /dev/null 2>&1; then
-              git checkout -b "${branch}" worktree-staging >/dev/null 2>&1
+              git checkout -b "${branch}" wt-working >/dev/null 2>&1
               popd > /dev/null 2>&1
             fi
 
