@@ -203,7 +203,7 @@ List all worktrees with their status.
 wt list
 ```
 
-### `wt assign <file|abbreviation|directory|*> <worktree>`
+### `wt assign <file|abbreviation|directory|.> <worktree>`
 
 Assign files to a worktree and commit them to `worktree-staging`.
 
