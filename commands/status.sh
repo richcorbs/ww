@@ -288,9 +288,11 @@ cmd_status() {
         # Display with abbreviations
         for file_status in "${uncommitted_files[@]}"; do
           local status_code="${file_status:0:2}"
+          # Remove leading space if present for consistent formatting
+          status_code="${status_code# }"
           local filepath="${file_status:3}"
           local abbrev="${temp_abbrevs[$filepath]}"
-          echo -e "      ${YELLOW}${abbrev}${NC}  ${status_code} ${filepath}"
+          echo -e "      ${YELLOW}${abbrev}${NC}  ${status_code}  ${filepath}"
         done
       fi
 
