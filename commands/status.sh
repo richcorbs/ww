@@ -48,16 +48,16 @@ cmd_status() {
   local current_branch
   current_branch=$(git branch --show-current)
 
-  # Check if worktree-staging is behind main
+  # Check if wt-working is behind main
   local behind_status=""
-  if [[ "$current_branch" == "worktree-staging" ]] && git remote get-url origin > /dev/null 2>&1; then
+  if [[ "$current_branch" == "wt-working" ]] && git remote get-url origin > /dev/null 2>&1; then
     # Determine main branch name
     local main_branch
     main_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
 
     # Check if origin/main exists
     if git show-ref --verify --quiet "refs/remotes/origin/${main_branch}"; then
-      # Compare worktree-staging with origin/main
+      # Compare wt-working with origin/main
       local behind_count
       behind_count=$(git rev-list --count HEAD..origin/${main_branch} 2>/dev/null || echo "0")
 
@@ -70,10 +70,10 @@ cmd_status() {
   echo -e "  Working in: ${current_branch}${behind_status}"
   echo ""
 
-  # Check if on worktree-staging branch
-  if [[ "$current_branch" != "worktree-staging" ]]; then
-    warn "Not on worktree-staging branch (currently on: ${current_branch})"
-    info "Use 'git checkout worktree-staging' to switch"
+  # Check if on wt-working branch
+  if [[ "$current_branch" != "wt-working" ]]; then
+    warn "Not on wt-working branch (currently on: ${current_branch})"
+    info "Use 'git checkout wt-working' to switch"
     echo ""
   fi
 
@@ -171,17 +171,17 @@ cmd_status() {
           done < <(git status --porcelain 2>/dev/null)
         fi
 
-        # Count commits not in worktree-staging
-        commit_count=$(git rev-list --count "worktree-staging..HEAD" 2>/dev/null || echo "0")
+        # Count commits not in wt-working
+        commit_count=$(git rev-list --count "wt-working..HEAD" 2>/dev/null || echo "0")
 
         popd > /dev/null 2>&1
       fi
 
-      # Check if this worktree's changes are in worktree-staging
-      # Look for assignment commits for this worktree in worktree-staging
+      # Check if this worktree's changes are in wt-working
+      # Look for assignment commits for this worktree in wt-working
       local applied_status=""
       local assignment_commits
-      assignment_commits=$(git log worktree-staging --oneline --grep="wt: assign .* to ${name}" --max-count=50 2>/dev/null || echo "")
+      assignment_commits=$(git log wt-working --oneline --grep="wt: assign .* to ${name}" --max-count=50 2>/dev/null || echo "")
 
       if [[ -n "$assignment_commits" ]]; then
         # Found assignment commits - worktree is applied to staging
@@ -190,15 +190,15 @@ cmd_status() {
         # No assignment commits but has commits - check if commits are in staging via patch-id
         local unapplied_count=0
         if pushd "$abs_path" > /dev/null 2>&1; then
-          # Get patch-ids of commits in worktree but not in worktree-staging
+          # Get patch-ids of commits in worktree but not in wt-working
           local worktree_patches
-          worktree_patches=$(git log --format='%H' worktree-staging..HEAD 2>/dev/null | while read commit; do git show "$commit" | git patch-id --stable 2>/dev/null | awk '{print $1}'; done)
+          worktree_patches=$(git log --format='%H' wt-working..HEAD 2>/dev/null | while read commit; do git show "$commit" | git patch-id --stable 2>/dev/null | awk '{print $1}'; done)
 
           if [[ -n "$worktree_patches" ]]; then
-            # Check each patch to see if it exists in worktree-staging
+            # Check each patch to see if it exists in wt-working
             while IFS= read -r patch_id; do
-              # Search worktree-staging for this patch-id
-              if ! git log --format='%H' worktree-staging --max-count=100 2>/dev/null | while read staging_commit; do git show "$staging_commit" | git patch-id --stable 2>/dev/null | awk '{print $1}'; done | grep -q "^${patch_id}$"; then
+              # Search wt-working for this patch-id
+              if ! git log --format='%H' wt-working --max-count=100 2>/dev/null | while read staging_commit; do git show "$staging_commit" | git patch-id --stable 2>/dev/null | awk '{print $1}'; done | grep -q "^${patch_id}$"; then
                 unapplied_count=$((unapplied_count + 1))
               fi
             done <<< "$worktree_patches"
@@ -213,9 +213,9 @@ cmd_status() {
         fi
       fi
 
-      # Check if branch is pushed and ahead/behind remote
+      # Check if branch is pushed and ahead/behind remote (only if there are commits)
       local push_status=""
-      if pushd "$abs_path" > /dev/null 2>&1; then
+      if [[ "$commit_count" -gt 0 ]] && pushd "$abs_path" > /dev/null 2>&1; then
         local upstream
         upstream=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "")
 
@@ -253,6 +253,8 @@ cmd_status() {
         status_str=" - $(IFS=", "; echo "${status_parts[*]}")${applied_status}${push_status}"
       elif [[ -n "$push_status" ]] || [[ -n "$applied_status" ]]; then
         status_str="${applied_status}${push_status}"
+      else
+        status_str=" - ${YELLOW}EMPTY${NC}"
       fi
 
       # Check if branch has been merged into main
