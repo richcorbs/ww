@@ -25,6 +25,9 @@ show_usage() {
   cat <<EOF
 wt - Worktree workflow manager
 
+A GitButler-inspired workflow using native git worktrees. Work on multiple
+features simultaneously while keeping changes organized in a staging branch.
+
 Usage: wt <command> [options]
 
 Commands:

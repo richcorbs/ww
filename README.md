@@ -154,8 +154,8 @@ Output:
   Worktrees:
     feature-auth (feature/user-auth) - 2 uncommitted, 1 commit(s)
       PR #123: https://github.com/user/repo/pull/123
-        gh  M  app/models/user.rb
-        ij  A  app/services/auth_service.rb
+      gh  M  app/models/user.rb
+      ij  A  app/services/auth_service.rb
     bugfix-login (bugfix/login-issue) - 0 uncommitted, 0 commit(s)
 ```
 
