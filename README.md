@@ -4,6 +4,7 @@ A GitButler-inspired workflow using native git worktrees, allowing you to work o
 
 ## Features
 
+- **Modernized git workflow**: Make changes and then decide which worktree/branch to assign them to
 - **Dedicated staging branch**: All work happens in `worktree-staging`, keeping `main` clean
 - **Interactive file selection**: Use fzf for visual multi-select file assignment
 - **File-level assignment**: Selectively assign files to different worktrees
