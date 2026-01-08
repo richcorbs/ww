@@ -126,21 +126,10 @@ cmd_status() {
     repo_root=$(get_repo_root)
 
     # Determine main branch once
-    local main_branch="main"
-    local check_branch=""
-    if git show-ref --verify --quiet refs/remotes/origin/main; then
-      check_branch="origin/main"
-      main_branch="main"
-    elif git show-ref --verify --quiet refs/remotes/origin/master; then
-      check_branch="origin/master"
-      main_branch="master"
-    elif git show-ref --verify --quiet refs/heads/main; then
-      check_branch="main"
-      main_branch="main"
-    elif git show-ref --verify --quiet refs/heads/master; then
-      check_branch="master"
-      main_branch="master"
-    fi
+    local main_branch
+    main_branch=$(get_main_branch)
+    local check_branch
+    check_branch=$(get_main_branch_ref)
 
     while IFS= read -r name; do
       local branch
@@ -157,25 +146,24 @@ cmd_status() {
         continue
       fi
 
-      # Get uncommitted files and commit count in one pushd
+      # Get uncommitted files and commit count
       local uncommitted_files=()
-      local uncommitted_count=0
-      local commit_count=0
-      if pushd "$abs_path" > /dev/null 2>&1; then
-        uncommitted_count=$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+      local uncommitted_count
+      uncommitted_count=$(get_worktree_uncommitted_count "$abs_path")
 
-        # Get list of uncommitted files with status
-        if [[ "$uncommitted_count" -gt 0 ]]; then
+      # Get list of uncommitted files with status
+      if [[ "$uncommitted_count" -gt 0 ]]; then
+        if pushd "$abs_path" > /dev/null 2>&1; then
           while IFS= read -r line; do
             uncommitted_files+=("$line")
           done < <(git status --porcelain 2>/dev/null)
+          popd > /dev/null 2>&1
         fi
-
-        # Count commits not in wt-working
-        commit_count=$(git rev-list --count "wt-working..HEAD" 2>/dev/null || echo "0")
-
-        popd > /dev/null 2>&1
       fi
+
+      # Count commits not in wt-working
+      local commit_count
+      commit_count=$(get_worktree_commit_count "$abs_path")
 
       # Check if this worktree's changes are in wt-working
       # Look for assignment commits for this worktree in wt-working
@@ -215,29 +203,35 @@ cmd_status() {
 
       # Check if branch is pushed and ahead/behind remote (only if there are commits)
       local push_status=""
-      if [[ "$commit_count" -gt 0 ]] && pushd "$abs_path" > /dev/null 2>&1; then
-        local upstream
-        upstream=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "")
+      if [[ "$commit_count" -gt 0 ]]; then
+        if pushd "$abs_path" > /dev/null 2>&1; then
+          local upstream
+          upstream=$(get_upstream_branch)
 
-        if [[ -n "$upstream" ]]; then
-          local ahead
-          ahead=$(git rev-list --count @{u}..HEAD 2>/dev/null || echo "0")
-          local behind
-          behind=$(git rev-list --count HEAD..@{u} 2>/dev/null || echo "0")
+          if [[ -n "$upstream" ]]; then
+            local ahead behind
+            while IFS=' ' read -r key value; do
+              if [[ "$key" == "ahead" ]]; then
+                ahead="$value"
+              elif [[ "$key" == "behind" ]]; then
+                behind="$value"
+              fi
+            done < <(get_ahead_behind_counts)
 
-          if [[ "$ahead" -gt 0 ]] && [[ "$behind" -gt 0 ]]; then
-            push_status=" ${YELLOW}[${ahead} ahead, ${behind} behind]${NC}"
-          elif [[ "$ahead" -gt 0 ]]; then
-            push_status=" ${YELLOW}[${ahead} ahead]${NC}"
-          elif [[ "$behind" -gt 0 ]]; then
-            push_status=" ${YELLOW}[${behind} behind]${NC}"
+            if [[ "$ahead" -gt 0 ]] && [[ "$behind" -gt 0 ]]; then
+              push_status=" ${YELLOW}[${ahead} ahead, ${behind} behind]${NC}"
+            elif [[ "$ahead" -gt 0 ]]; then
+              push_status=" ${YELLOW}[${ahead} ahead]${NC}"
+            elif [[ "$behind" -gt 0 ]]; then
+              push_status=" ${YELLOW}[${behind} behind]${NC}"
+            else
+              push_status=" ${GREEN}[pushed]${NC}"
+            fi
           else
-            push_status=" ${GREEN}[pushed]${NC}"
+            push_status=" ${YELLOW}[not pushed]${NC}"
           fi
-        else
-          push_status=" ${YELLOW}[not pushed]${NC}"
+          popd > /dev/null 2>&1
         fi
-        popd > /dev/null 2>&1
       fi
 
       local status_parts=()
@@ -259,7 +253,7 @@ cmd_status() {
 
       # Check if branch has been merged into main
       local is_merged=false
-      if [[ -n "$check_branch" ]] && git branch --merged "$check_branch" 2>/dev/null | grep -q "^[*+ ]*${branch}$"; then
+      if [[ -n "$check_branch" ]] && is_branch_merged "$branch" "$check_branch"; then
         is_merged=true
       fi
 
