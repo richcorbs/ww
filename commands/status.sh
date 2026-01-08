@@ -47,11 +47,10 @@ cmd_status() {
   # Show current branch at the top
   local current_branch
   current_branch=$(git branch --show-current)
-  echo "  Working in: ${current_branch}"
-  echo ""
 
-  # Check if worktree-staging is behind main (show first)
-  if git remote get-url origin > /dev/null 2>&1; then
+  # Check if worktree-staging is behind main
+  local behind_status=""
+  if [[ "$current_branch" == "worktree-staging" ]] && git remote get-url origin > /dev/null 2>&1; then
     # Determine main branch name
     local main_branch
     main_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
@@ -63,11 +62,13 @@ cmd_status() {
       behind_count=$(git rev-list --count HEAD..origin/${main_branch} 2>/dev/null || echo "0")
 
       if [[ "$behind_count" -gt 0 ]]; then
-        info "Run 'wt sync' to merge latest changes from ${main_branch}"
-        echo ""
+        behind_status=" ${YELLOW}(${behind_count} behind origin/${main_branch})${NC}"
       fi
     fi
   fi
+
+  echo -e "  Working in: ${current_branch}${behind_status}"
+  echo ""
 
   # Check if on worktree-staging branch
   if [[ "$current_branch" != "worktree-staging" ]]; then
