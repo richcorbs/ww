@@ -70,15 +70,18 @@ cmd_list() {
       current_branch=$(git branch --show-current 2>/dev/null || echo "")
 
       if [[ -n "$current_branch" ]]; then
-        # Try to get ahead/behind info compared to origin
         local upstream
-        upstream=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "")
+        upstream=$(get_upstream_branch)
 
         if [[ -n "$upstream" ]]; then
-          local ahead
-          ahead=$(git rev-list --count "${upstream}..HEAD" 2>/dev/null || echo "0")
-          local behind
-          behind=$(git rev-list --count "HEAD..${upstream}" 2>/dev/null || echo "0")
+          local ahead behind
+          while IFS=' ' read -r key value; do
+            if [[ "$key" == "ahead" ]]; then
+              ahead="$value"
+            elif [[ "$key" == "behind" ]]; then
+              behind="$value"
+            fi
+          done < <(get_ahead_behind_counts)
 
           if [[ "$ahead" -gt 0 ]] || [[ "$behind" -gt 0 ]]; then
             ahead_behind=" (↑${ahead} ↓${behind})"
@@ -90,11 +93,8 @@ cmd_list() {
     fi
 
     # Count uncommitted changes
-    local uncommitted_count=0
-    if pushd "$abs_path" > /dev/null 2>&1; then
-      uncommitted_count=$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')
-      popd > /dev/null 2>&1
-    fi
+    local uncommitted_count
+    uncommitted_count=$(get_worktree_uncommitted_count "$abs_path")
 
     local status_info=""
     if [[ "$uncommitted_count" -gt 0 ]]; then
