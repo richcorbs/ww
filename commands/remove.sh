@@ -91,15 +91,19 @@ cmd_remove() {
   if [[ "$force" == "false" ]]; then
     if pushd "$abs_worktree_path" > /dev/null 2>&1; then
       local upstream
-      upstream=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "")
+      upstream=$(get_upstream_branch)
 
       if [[ -n "$upstream" ]]; then
-        local unpushed
-        unpushed=$(git rev-list --count "${upstream}..HEAD" 2>/dev/null || echo "0")
+        local ahead behind
+        while IFS=' ' read -r key value; do
+          if [[ "$key" == "ahead" ]]; then
+            ahead="$value"
+          fi
+        done < <(get_ahead_behind_counts)
 
-        if [[ "$unpushed" -gt 0 ]]; then
+        if [[ "$ahead" -gt 0 ]]; then
           popd > /dev/null 2>&1
-          error "Branch '${worktree_branch}' has ${unpushed} unpushed commit(s). Use --force to remove anyway."
+          error "Branch '${worktree_branch}' has ${ahead} unpushed commit(s). Use --force to remove anyway."
         fi
       fi
 
