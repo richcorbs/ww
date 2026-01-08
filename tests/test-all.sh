@@ -20,6 +20,7 @@ assert_branch_exists "worktree-staging" "worktree-staging branch should exist"
 assert_current_branch "worktree-staging" "Should be on worktree-staging branch"
 assert_file_exists ".worktree-flow" ".worktree-flow directory should exist"
 assert_file_exists ".worktree-flow/metadata.json" "metadata.json should exist"
+assert_file_exists ".worktree-flow/abbreviations.json" "abbreviations.json should exist"
 
 # Check .gitignore
 GITIGNORE_CONTENT=$(cat .gitignore)
@@ -32,13 +33,13 @@ REPO=$(create_test_repo "create-test")
 cd "$REPO"
 $WT_BIN init > /dev/null 2>&1
 
-assert_success "$WT_BIN create feature/test" "wt create should succeed"
-assert_file_exists ".worktrees/feature/test" "Worktree directory should exist"
+assert_success "$WT_BIN create test-wt feature/test" "wt create should succeed"
+assert_file_exists ".worktrees/test-wt" "Worktree directory should exist"
 assert_branch_exists "feature/test" "Feature branch should exist"
 
 # Check metadata
 METADATA=$(cat .worktree-flow/metadata.json)
-assert_contains "$METADATA" "feature/test" "Metadata should contain worktree name"
+assert_contains "$METADATA" "test-wt" "Metadata should contain worktree name"
 assert_contains "$METADATA" "feature/test" "Metadata should contain branch name"
 
 # Test: wt list
