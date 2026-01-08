@@ -74,19 +74,16 @@ cmd_remove() {
   # Check if directory exists
   if [[ ! -d "$abs_worktree_path" ]]; then
     warn "Worktree directory not found at ${abs_worktree_path}"
-    warn "Cleaning up metadata only..."
+    warn "Cleaning up git worktree registration..."
 
-    remove_worktree_metadata "$worktree_name"
+    git worktree prune
 
-    # Remove any applied commits for this worktree
-    local applied_commits
-    applied_commits=$(get_applied_commits_for_worktree "$worktree_name")
+    # Try to delete the branch if it exists
+    if git show-ref --verify --quiet "refs/heads/${worktree_branch}"; then
+      git branch -D "$worktree_branch" 2>/dev/null || true
+    fi
 
-    while IFS= read -r commit; do
-      [[ -n "$commit" ]] && remove_applied_commit "$commit"
-    done <<< "$applied_commits"
-
-    success "Metadata cleaned up for '${worktree_name}'"
+    success "Cleaned up worktree registration for '${worktree_name}'"
     exit 0
   fi
 
@@ -126,17 +123,6 @@ cmd_remove() {
   info "Removing worktree '${worktree_name}'..."
 
   if git worktree remove "$abs_worktree_path" 2>&1 || git worktree remove --force "$abs_worktree_path" 2>&1; then
-    # Clean up metadata
-    remove_worktree_metadata "$worktree_name"
-
-    # Remove any applied commits for this worktree
-    local applied_commits
-    applied_commits=$(get_applied_commits_for_worktree "$worktree_name")
-
-    while IFS= read -r commit; do
-      [[ -n "$commit" ]] && remove_applied_commit "$commit"
-    done <<< "$applied_commits"
-
     success "Worktree '${worktree_name}' removed"
   else
     error "Failed to remove worktree"
