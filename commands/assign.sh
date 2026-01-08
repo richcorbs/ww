@@ -217,15 +217,8 @@ cmd_assign() {
   for filepath in "${files_to_assign[@]}"; do
     info "Assigning ${filepath}..."
 
-    # Stage the file (handles both regular files and deletions)
-    if [[ -f "$filepath" ]]; then
-      git add "$filepath"
-    else
-      # File is deleted - stage the deletion
-      git add -u "$filepath" 2>/dev/null || git rm "$filepath" 2>/dev/null || true
-    fi
-
-    # Commit the file to worktree-staging
+    # Stage and commit the file to worktree-staging
+    git add "$filepath"
     if git commit -m "wt: assign ${filepath} to ${worktree_name}"; then
       local commit_sha
       commit_sha=$(git rev-parse HEAD)
@@ -239,21 +232,13 @@ cmd_assign() {
 
       # Apply to worktree
       if pushd "$abs_worktree_path" > /dev/null 2>&1; then
-        # Apply the patch (handles both modifications and deletions)
-        if git apply "$patch_file" 2>/dev/null; then
+        # Apply the patch
+        if git apply "$patch_file" 2>/dev/null || cp "${repo_root}/${filepath}" "$filepath" 2>/dev/null; then
           assigned_count=$((assigned_count + 1))
-        elif [[ -f "${repo_root}/${filepath}" ]]; then
-          # Fallback: copy file if patch failed and file exists
-          if cp "${repo_root}/${filepath}" "$filepath" 2>/dev/null; then
-            assigned_count=$((assigned_count + 1))
-          else
-            popd > /dev/null 2>&1 || true
-            rm -f "$patch_file"
-            warn "Failed to apply ${filepath} to worktree, but it's committed to staging"
-          fi
         else
-          # File was deleted - git apply should have handled it, but count it anyway
-          assigned_count=$((assigned_count + 1))
+          popd > /dev/null 2>&1 || true
+          rm -f "$patch_file"
+          warn "Failed to apply ${filepath} to worktree, but it's committed to staging"
         fi
 
         popd > /dev/null 2>&1 || true
