@@ -136,7 +136,7 @@ This:
 
 ### `wt status`
 
-Show uncommitted changes with abbreviations and worktree status.
+Show unassigned changes and the status of each worktree.
 
 ```bash
 wt status
@@ -160,8 +160,8 @@ Output:
 ```
 
 Shows:
-- Unassigned changes with two-letter abbreviations
-- Worktree status with commit counts
+- Unassigned changes with two-letter abbreviations for making assignments easy
+- Worktree status with commit counts and unstaged changes
 - Associated PR links (requires GitHub CLI)
 - Uncommitted files in each worktree with git status codes
 
