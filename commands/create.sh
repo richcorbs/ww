@@ -3,29 +3,27 @@
 
 show_help() {
   cat <<EOF
-Usage: wt create <name> <branch> [path]
+Usage: wt create <branch>
 
-Create a new worktree with the given name and branch, branching from worktree-staging.
+Create a new worktree with the given branch name, branching from worktree-staging.
+The worktree name will be the same as the branch name.
 
 Arguments:
-  name      Name for the worktree (used to reference it)
-  branch    Branch name for the worktree
-  path      Optional custom path (default: .worktrees/<name>)
+  branch    Branch name (also used as worktree name)
 
 Options:
   -h, --help    Show this help message
 
 Examples:
-  wt create feature-auth feature/user-auth
-  wt create bugfix-123 bugfix/issue-123 ~/my-worktrees/bugfix
+  wt create feature/user-auth       # Creates .worktrees/feature/user-auth/
+  wt create bugfix/issue-123        # Creates .worktrees/bugfix/issue-123/
+  wt create feat-login              # Creates .worktrees/feat-login/
 EOF
 }
 
 cmd_create() {
   # Parse arguments
-  local name=""
   local branch=""
-  local custom_path=""
 
   while [[ $# -gt 0 ]]; do
     case $1 in
@@ -34,12 +32,8 @@ cmd_create() {
         exit 0
         ;;
       *)
-        if [[ -z "$name" ]]; then
-          name="$1"
-        elif [[ -z "$branch" ]]; then
+        if [[ -z "$branch" ]]; then
           branch="$1"
-        elif [[ -z "$custom_path" ]]; then
-          custom_path="$1"
         else
           error "Too many arguments"
         fi
@@ -49,10 +43,6 @@ cmd_create() {
   done
 
   # Validate arguments
-  if [[ -z "$name" ]]; then
-    error "Missing required argument: name"
-  fi
-
   if [[ -z "$branch" ]]; then
     error "Missing required argument: branch"
   fi
@@ -60,6 +50,9 @@ cmd_create() {
   # Ensure initialized
   ensure_git_repo
   ensure_initialized
+
+  # Use branch name as worktree name
+  local name="$branch"
 
   # Check if worktree already exists
   if worktree_exists "$name"; then
@@ -77,36 +70,23 @@ cmd_create() {
     git checkout worktree-staging
   fi
 
-  # Determine path
-  local worktree_path
-  if [[ -n "$custom_path" ]]; then
-    worktree_path="$custom_path"
-  else
-    worktree_path=".worktrees/${name}"
-  fi
-
-  # Convert to absolute path for git worktree add
-  local abs_path
-  if [[ "$worktree_path" = /* ]]; then
-    abs_path="$worktree_path"
-  else
-    abs_path="${repo_root}/${worktree_path}"
-  fi
+  # Path is always .worktrees/<branch> (slashes create subdirectories)
+  local worktree_path=".worktrees/${branch}"
+  local abs_path="${repo_root}/${worktree_path}"
 
   # Create the worktree from worktree-staging
-  info "Creating worktree '${name}' at ${abs_path}..."
-  info "Branching from worktree-staging..."
+  info "Creating worktree '${name}'..."
+  info "Branching from worktree-staging as '${branch}'..."
 
   if git worktree add -b "$branch" "$abs_path" worktree-staging 2>&1; then
     # Add to metadata
     add_worktree_metadata "$name" "$branch" "$worktree_path"
 
     success "Worktree '${name}' created successfully!"
-    info "Branch: ${branch}"
     info "Path: ${abs_path}"
-    info ""
-    info "To assign files to this worktree, use:"
-    info "  wt assign <file> ${name}"
+    echo ""
+    source "${WT_ROOT}/commands/status.sh"
+    cmd_status
   else
     error "Failed to create worktree"
   fi

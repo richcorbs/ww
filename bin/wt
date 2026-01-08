@@ -17,8 +17,6 @@ WT_ROOT="$(dirname "$SCRIPT_DIR")"
 # Source shared libraries
 # shellcheck source=../lib/wt-lib.sh
 source "${WT_ROOT}/lib/wt-lib.sh"
-# shellcheck source=../lib/abbreviations.sh
-source "${WT_ROOT}/lib/abbreviations.sh"
 
 # Show usage
 show_usage() {

@@ -172,6 +172,9 @@ cmd_sync() {
     else
       info "No merged worktrees to clean up"
     fi
+    echo ""
+    source "${WT_ROOT}/commands/status.sh"
+    cmd_status
     exit 0
   else
     error "Merge conflicts detected. Please resolve them and commit."

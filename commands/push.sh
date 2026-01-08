@@ -94,6 +94,9 @@ cmd_push() {
     fi
 
     popd > /dev/null 2>&1
+    echo ""
+    source "${WT_ROOT}/commands/status.sh"
+    cmd_status
   else
     error "Failed to enter worktree directory"
   fi

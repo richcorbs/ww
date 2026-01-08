@@ -3,30 +3,30 @@
 
 show_help() {
   cat <<EOF
-Usage: wt unassign <file|abbreviation|.> <worktree>
+Usage: wt unassign <worktree> [file|.]
 
 Unassign file(s) from a worktree by reverting their commits in worktree-staging
 and removing the changes from the worktree. The files will show up as
 "unassigned" again.
 
 Arguments:
-  file|abbreviation|.  File path, two-letter abbreviation, or . for all assigned files
-  worktree             Name of the worktree
+  worktree     Name of the worktree
+  file|.|      Optional: File path, directory, or . for all assigned files
 
 Options:
   -h, --help    Show this help message
 
 Examples:
-  wt unassign ab feature-auth                # Single file by abbreviation
-  wt unassign app/models/user.rb feature-auth # Single file by path
-  wt unassign . feature-auth                 # All uncommitted files assigned to the worktree
+  wt unassign feature-auth                    # Unassign all files
+  wt unassign feature-auth app/models/user.rb # Single file by path
+  wt unassign feature-auth .                  # All uncommitted files assigned to the worktree
 EOF
 }
 
 cmd_unassign() {
   # Parse arguments
-  local file_or_abbrev=""
   local worktree_name=""
+  local file_or_abbrev=""
 
   while [[ $# -gt 0 ]]; do
     case $1 in
@@ -35,10 +35,10 @@ cmd_unassign() {
         exit 0
         ;;
       *)
-        if [[ -z "$file_or_abbrev" ]]; then
-          file_or_abbrev="$1"
-        elif [[ -z "$worktree_name" ]]; then
+        if [[ -z "$worktree_name" ]]; then
           worktree_name="$1"
+        elif [[ -z "$file_or_abbrev" ]]; then
+          file_or_abbrev="$1"
         else
           error "Too many arguments"
         fi
@@ -48,12 +48,13 @@ cmd_unassign() {
   done
 
   # Validate arguments
-  if [[ -z "$file_or_abbrev" ]]; then
-    error "Missing required argument: file or abbreviation"
-  fi
-
   if [[ -z "$worktree_name" ]]; then
     error "Missing required argument: worktree"
+  fi
+
+  # Default to all files if no file specified
+  if [[ -z "$file_or_abbrev" ]]; then
+    file_or_abbrev="."
   fi
 
   # Ensure initialized
@@ -72,65 +73,66 @@ cmd_unassign() {
     error "Worktree '$worktree_name' not found"
   fi
 
+  # Check for unassigned changes in worktree-staging
+  if ! git diff-index --quiet HEAD --; then
+    error "Cannot unassign: worktree-staging has unassigned changes. Assign them first."
+  fi
+
   # Check if unassigning all files
   if [[ "$file_or_abbrev" == "." ]]; then
     info "Unassigning all files from '${worktree_name}'..."
 
     # Find all assignment commits for this worktree
-    local commit_pattern="wt: assign .* to ${worktree_name}"
-    local commits_to_revert=()
+    local files_to_restore=()
 
     while IFS= read -r sha; do
       local msg
       msg=$(git log -1 --format="%s" "$sha")
 
-      if [[ "$msg" =~ ^wt:\ assign\ .*\ to\ ${worktree_name}$ ]]; then
-        commits_to_revert+=("$sha")
+      if [[ "$msg" =~ ^wt:\ assign\ (.*)\ to\ ${worktree_name}$ ]]; then
+        local filepath="${BASH_REMATCH[1]}"
+        files_to_restore+=("$filepath:$sha")
       fi
     done < <(git log --format="%H" -n 100)  # Search last 100 commits
 
-    if [[ ${#commits_to_revert[@]} -eq 0 ]]; then
+    if [[ ${#files_to_restore[@]} -eq 0 ]]; then
       warn "No assignment commits found for '${worktree_name}'"
       exit 0
     fi
 
-    info "Found ${#commits_to_revert[@]} assignment commit(s) to revert"
+    info "Found ${#files_to_restore[@]} file(s) to unassign"
 
-    # Revert commits in reverse order (newest first)
-    for commit_sha in "${commits_to_revert[@]}"; do
-      local short_sha
-      short_sha=$(git rev-parse --short "$commit_sha")
+    # Restore each file to its pre-assignment state
+    for file_commit in "${files_to_restore[@]}"; do
+      local filepath="${file_commit%:*}"
+      local commit_sha="${file_commit#*:}"
+      local parent_commit="${commit_sha}^"
 
-      if ! git revert --no-edit "$commit_sha" 2>&1; then
-        error "Failed to revert commit ${short_sha}. There may be conflicts."
+      info "Unassigning ${filepath}..."
+
+      # Check if file existed before assignment
+      if git cat-file -e "${parent_commit}:${filepath}" 2>/dev/null; then
+        # File existed - restore to previous version
+        git show "${parent_commit}:${filepath}" > "${filepath}"
+        git add "${filepath}"
+      else
+        # File didn't exist - delete it
+        git rm "${filepath}" 2>/dev/null || rm -f "${filepath}"
       fi
     done
 
     success "Unassigned all files from '${worktree_name}'"
-    info "Files are now uncommitted in worktree-staging"
+    info "Files are now unassigned in worktree-staging"
+    echo ""
+    source "${WT_ROOT}/commands/status.sh"
+    cmd_status
     exit 0
-  fi
-
-  # Resolve file path
-  local filepath=""
-  if [[ ${#file_or_abbrev} -eq 2 ]]; then
-    # Try as abbreviation first (though it won't be in abbreviations if assigned)
-    local temp_path
-    temp_path=$(get_filepath_from_abbrev "$file_or_abbrev")
-
-    if [[ -n "$temp_path" ]]; then
-      filepath="$temp_path"
-    else
-      # Treat as file path
-      filepath="$file_or_abbrev"
-    fi
-  else
-    filepath="$file_or_abbrev"
   fi
 
   # Find the commit that assigned this file to this worktree
   info "Searching for assignment commit..."
 
+  local filepath="$file_or_abbrev"
   local commit_sha=""
   local commit_msg="wt: assign ${filepath} to ${worktree_name}"
 
@@ -154,10 +156,22 @@ cmd_unassign() {
 
   info "Found assignment commit: ${short_sha}"
 
-  # Revert the commit
-  info "Reverting commit..."
+  # Restore file to pre-assignment state
+  info "Unassigning ${filepath}..."
 
-  if git revert --no-edit "$commit_sha" 2>&1; then
+  local parent_commit="${commit_sha}^"
+
+  # Check if file existed before assignment
+  if git cat-file -e "${parent_commit}:${filepath}" 2>/dev/null; then
+    # File existed - restore to previous version
+    git show "${parent_commit}:${filepath}" > "${filepath}"
+    git add "${filepath}"
+  else
+    # File didn't exist - delete it
+    git rm "${filepath}" 2>/dev/null || rm -f "${filepath}"
+  fi
+
+  if true; then
     success "Unassigned '${filepath}' from '${worktree_name}'"
     info "File is now uncommitted in worktree-staging"
 
@@ -179,6 +193,9 @@ cmd_unassign() {
         popd > /dev/null 2>&1
       fi
     fi
+    echo ""
+    source "${WT_ROOT}/commands/status.sh"
+    cmd_status
   else
     error "Failed to revert commit. There may be conflicts."
   fi

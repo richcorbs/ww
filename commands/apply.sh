@@ -112,4 +112,7 @@ cmd_apply() {
   done <<< "$commits"
 
   success "Applied ${#applied_commits[@]} commit(s) from '${worktree_name}' to staging"
+  echo ""
+  source "${WT_ROOT}/commands/status.sh"
+  cmd_status
 }

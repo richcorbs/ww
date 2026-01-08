@@ -98,6 +98,9 @@ cmd_uncommit() {
       popd > /dev/null 2>&1
       success "Uncommitted last commit in '${worktree_name}': ${last_commit_sha}"
       info "Changes are now uncommitted in the worktree"
+      echo ""
+      source "${WT_ROOT}/commands/status.sh"
+      cmd_status
     else
       popd > /dev/null 2>&1
       error "Failed to uncommit"

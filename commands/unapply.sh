@@ -120,4 +120,7 @@ cmd_unapply() {
   done
 
   success "Unapplied ${#staging_commits[@]} commit(s) from '${worktree_name}'"
+  echo ""
+  source "${WT_ROOT}/commands/status.sh"
+  cmd_status
 }
