@@ -6,7 +6,7 @@ A GitButler-inspired workflow using native git worktrees, allowing you to work o
 
 - **Modernized git workflow**: Make changes and then decide which worktree/branch to assign them to
 - **Uses standard git commands**: Be confident that your changes are safe
-- **Dedicated staging branch**: All work happens in `worktree-staging`, keeping `main` clean
+- **Dedicated staging branch**: All work happens in `wt-working`, keeping `main` clean
 - **Interactive file selection**: Use fzf for visual multi-select file assignment
 - **File-level assignment**: Selectively assign files to different worktrees
 - **Directory assignment**: Assign all changed files in a directory or all files at once
@@ -49,7 +49,7 @@ The installer will:
 # 1. Initialize in your repository
 cd your-repo
 wt init
-# This creates worktree-staging branch and checks it out
+# This creates wt-working branch and checks it out
 
 # 2. Make some changes
 # ... edit files ...
@@ -57,7 +57,7 @@ wt init
 # 3. Check status
 wt status
 # Output:
-#   Working in: worktree-staging
+#   Working in: wt-working
 #
 #   Unassigned changes:
 #     M  app/models/user.rb
@@ -88,23 +88,23 @@ wt push feature/user-auth
 # 8. Create pull request
 wt pr feature/user-auth  # Opens GitHub PR creation page in browser
 
-# 9. After PR is merged to main, sync worktree-staging
+# 9. After PR is merged to main, sync wt-working
 wt sync
-# This merges main into worktree-staging and automatically cleans up merged worktrees
+# This merges main into wt-working and automatically cleans up merged worktrees
 ```
 
 ## How It Works
 
-### The worktree-staging Branch
+### The wt-working Branch
 
-Instead of working directly in `main`, all your work happens in a dedicated `worktree-staging` branch:
+Instead of working directly in `main`, all your work happens in a dedicated `wt-working` branch:
 
-1. **Initialize**: `wt init` creates and checks out `worktree-staging`
-2. **Work**: Make all changes in `worktree-staging` but you don't have to. You can still checkout and branch off of `main` if you need to.
-3. **Assign**: `worktree-staging` stays in sync when files are assigned to worktrees
-4. **Worktrees**: `wt` automatically branches off of `worktree-staging` for you
+1. **Initialize**: `wt init` creates and checks out `wt-working`
+2. **Work**: Make all changes in `wt-working` but you don't have to. You can still checkout and branch off of `main` if you need to.
+3. **Assign**: `wt-working` stays in sync when files are assigned to worktrees
+4. **Worktrees**: `wt` automatically branches off of `wt-working` for you
 5. **Merge**: When features are done, merge to `main` via normal git PR workflow
-6. **Sync**: Use `wt sync` to merge `main` back into `worktree-staging` and cleanup your local branches and worktrees
+6. **Sync**: Use `wt sync` to merge `main` back into `wt-working` and cleanup your local branches and worktrees
 
 This keeps your `main` branch pristine while giving you a flexible staging area.
 
@@ -133,7 +133,7 @@ wt init
 ```
 
 This:
-- Creates and checks out `worktree-staging` branch
+- Creates and checks out `wt-working` branch
 - Creates `.worktree-flow/` directory for metadata (gitignored)
 - Creates `.worktrees/` directory (gitignored)
 - Adds entries to `.gitignore`
@@ -148,7 +148,7 @@ wt status
 
 Output:
 ```
-  Working in: worktree-staging
+  Working in: wt-working
 
   Unassigned changes:
     ab  M  app/models/user.rb
@@ -171,10 +171,10 @@ Shows:
 
 ### `wt switch [branch]`
 
-Switch between branches. If no branch is specified, toggles between `worktree-staging` and `main`.
+Switch between branches. If no branch is specified, toggles between `wt-working` and `main`.
 
 ```bash
-# Toggle between worktree-staging and main
+# Toggle between wt-working and main
 wt switch
 
 # Switch to a specific branch
@@ -182,12 +182,12 @@ wt switch develop
 ```
 
 This is a convenient shortcut for `git checkout` with smart defaults:
-- If on `worktree-staging`: switches to `main`
-- If on any other branch: switches to `worktree-staging`
+- If on `wt-working`: switches to `main`
+- If on any other branch: switches to `wt-working`
 
 ### `wt create <branch>`
 
-Create a new worktree branching from `worktree-staging`. The branch name is used as the worktree name.
+Create a new worktree branching from `wt-working`. The branch name is used as the worktree name.
 
 ```bash
 wt create feature/user-auth    # Creates .worktrees/feature/user-auth/
@@ -220,7 +220,7 @@ wt assign feature/user-auth .                     # All files
 ```
 
 What happens:
-1. Files remain in `worktree-staging` (committed)
+1. Files remain in `wt-working` (committed)
 2. Changes are copied to the worktree (uncommitted)
 3. Files are removed from "unassigned" list
 
@@ -270,7 +270,7 @@ wt uncommit feature/user-auth
 
 ### `wt unassign <worktree> <file|.>`
 
-Unassign file(s) from a worktree - reverts the commit in `worktree-staging` and removes changes from the worktree.
+Unassign file(s) from a worktree - reverts the commit in `wt-working` and removes changes from the worktree.
 
 ```bash
 wt unassign feature/user-auth app/models/user.rb    # Single file
@@ -281,7 +281,7 @@ The file(s) will show up as "unassigned" again.
 
 ### `wt apply <worktree>`
 
-Apply (cherry-pick) commits from a worktree to worktree-staging. This means that all of the code will be available for further development or testing in worktree-staging.
+Apply (cherry-pick) commits from a worktree to wt-working. This means that all of the code will be available for further development or testing in wt-working.
 
 ```bash
 wt apply feature-auth
@@ -289,7 +289,7 @@ wt apply feature-auth
 
 ### `wt unapply <worktree>`
 
-Unapply (revert) commits that were applied from a worktree. This means that you effectively remove the worktree changeset from the worktree-staging branch and those changes are no longer available for further development or testing in worktree-staging. You can add them back to worktree-staging with `wt apply <worktree>`.
+Unapply (revert) commits that were applied from a worktree. This means that you effectively remove the worktree changeset from the wt-working branch and those changes are no longer available for further development or testing in wt-working. You can add them back to wt-working with `wt apply <worktree>`.
 
 ```bash
 wt unapply feature-auth
@@ -321,7 +321,7 @@ Works with both HTTPS and SSH remote URLs.
 
 ### `wt sync [branch]`
 
-Sync `worktree-staging` with another branch (default: main). Automatically detects and cleans up worktrees whose branches have been merged.
+Sync `wt-working` with another branch (default: main). Automatically detects and cleans up worktrees whose branches have been merged.
 
 ```bash
 wt sync           # Sync from main and clean up merged worktrees
@@ -331,7 +331,7 @@ wt sync develop   # Sync from develop
 What it does:
 1. Fetches latest changes from origin
 2. Updates local branch from origin
-3. Merges branch into `worktree-staging`
+3. Merges branch into `wt-working`
 4. **Automatically detects worktrees with merged branches**
 5. **Removes merged worktrees**
 6. **Deletes corresponding remote branches**
@@ -358,21 +358,21 @@ $ wt init
   ✓ Created .worktree-flow directory
   ✓ Created .worktrees directory
   ✓ Updated .gitignore
-  ✓ Created worktree-staging branch
+  ✓ Created wt-working branch
   ✓ Worktree workflow initialized
 
 # Create feature worktree
 $ wt create feature/auth
 
   ✓ Created worktree 'feature/auth' at .worktrees/feature/auth
-  ✓ Branched from worktree-staging as feature/auth
+  ✓ Branched from wt-working as feature/auth
 
-# Make changes in worktree-staging
+# Make changes in wt-working
 # ... edit files ...
 
 $ wt status
 
-  Working in: worktree-staging
+  Working in: wt-working
 
   Unassigned changes:
     M  app/models/user.rb
@@ -387,7 +387,7 @@ $ wt assign feature/auth
   Select files to assign (TAB to select, ENTER to confirm)...
   # fzf opens, select both files
 
-  ✓ Assigned 2 file(s) to 'feature/auth' and committed to worktree-staging
+  ✓ Assigned 2 file(s) to 'feature/auth' and committed to wt-working
 
 # Commit in worktree
 $ wt commit feature/auth "Add authentication"
@@ -409,10 +409,10 @@ $ wt pr feature/auth
 # After PR is merged to main, sync
 $ wt sync
 
-  Syncing worktree-staging with 'main'...
+  Syncing wt-working with 'main'...
   Fetching latest changes from origin...
   Updating local main from origin/main...
-  ✓ Successfully synced worktree-staging with 'main'
+  ✓ Successfully synced wt-working with 'main'
   Merge commit: a1b2c3d
   Checking for merged branches...
 
@@ -506,21 +506,21 @@ wt unassign feature/user-auth .
 wt sync
 
 # Output:
-# ✓ Successfully synced worktree-staging with 'main'
+# ✓ Successfully synced wt-working with 'main'
 # ✓ Branch 'feature/user-auth' has been merged into main
 #   - Removing worktree 'auth'...
 #   - Deleting remote branch 'feature/user-auth'...
 #   ✓ Cleaned up 'auth'
 # ✓ Cleaned up 1 merged worktree(s)
 
-# Done! worktree-staging is updated and merged work is cleaned up
+# Done! wt-working is updated and merged work is cleaned up
 # Continue working on new features
 ```
 
 ## Tips
 
-1. **Always work in `worktree-staging`** - Don't make changes in `main`
-2. **Use `wt switch` to quickly toggle** between `worktree-staging` and `main`
+1. **Always work in `wt-working`** - Don't make changes in `main`
+2. **Use `wt switch` to quickly toggle** between `wt-working` and `main`
 3. **Run `wt status` often** to see your abbreviations, worktree state, and uncommitted files
 4. **Use directory assignment** for bulk file operations: `wt assign app/models feature-x`
 5. **Use selective staging** for multi-part commits: `wt stage <worktree> <file>` then `wt commit`
@@ -542,12 +542,12 @@ export PATH="$HOME/.local/bin:$PATH"
 
 Add this to your `~/.bashrc` or `~/.zshrc`.
 
-### Not on worktree-staging branch
+### Not on wt-working branch
 
-`wt status` will warn you if you're not on `worktree-staging`. Switch back with:
+`wt status` will warn you if you're not on `wt-working`. Switch back with:
 
 ```bash
-git checkout worktree-staging
+git checkout wt-working
 ```
 
 ### Failed to apply patch
@@ -573,7 +573,7 @@ git commit
 - Work in one staging area
 - Selectively assign files to branches
 - Multiple features in parallel
-- Virtual branch concept (worktree-staging)
+- Virtual branch concept (wt-working)
 
 **Different:**
 - Uses native git worktrees
