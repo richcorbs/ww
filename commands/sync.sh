@@ -114,6 +114,7 @@ cmd_sync() {
             remove_worktree_metadata "$name"
 
             # Delete local branch
+            info "  Deleting local branch '${branch}'..."
             git branch -d "${branch}" 2>/dev/null || git branch -D "${branch}" 2>/dev/null
 
             # Delete remote branch if it exists
