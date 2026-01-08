@@ -78,46 +78,18 @@ cmd_stage() {
     # Resolve abbreviation if needed
     local resolved_file="$file_or_pattern"
     if [[ ${#file_or_pattern} -eq 2 ]] && [[ ! -f "$file_or_pattern" ]] && [[ ! -d "$file_or_pattern" ]]; then
-      # Might be an abbreviation - try to resolve from uncommitted files
-      local uncommitted_files
-      uncommitted_files=$(git status --porcelain 2>/dev/null || true)
+      # Might be an abbreviation - get uncommitted files in this worktree
+      local uncommitted_files_array=()
+      while IFS= read -r line; do
+        [[ -n "$line" ]] && uncommitted_files_array+=("${line:3}")
+      done < <(git status --porcelain 2>/dev/null)
 
-      if [[ -n "$uncommitted_files" ]]; then
-        # Load unassigned abbreviations to avoid collisions (same as status.sh does)
-        declare -A unassigned_abbrevs_map
-        local unassigned_abbrevs_list
+      if [[ ${#uncommitted_files_array[@]} -gt 0 ]]; then
+        local temp_resolved
+        temp_resolved=$(get_filepath_from_abbrev "$file_or_pattern" "${uncommitted_files_array[@]}")
 
-        # Need to temporarily go back to repo root to read abbreviations
-        popd > /dev/null 2>&1
-        unassigned_abbrevs_list=$(read_abbreviations 2>/dev/null | jq -r '.[]' 2>/dev/null || echo "")
-        while IFS= read -r abbrev; do
-          [[ -n "$abbrev" ]] && unassigned_abbrevs_map["$abbrev"]=1
-        done <<< "$unassigned_abbrevs_list"
-        pushd "$abs_worktree_path" > /dev/null 2>&1
-
-        # Generate abbreviations for uncommitted files and find match
-        declare -A temp_abbrevs
-        declare -A used_abbrevs
-
-        while IFS= read -r line; do
-          [[ -z "$line" ]] && continue
-          local filepath="${line:3}"
-
-          local abbrev
-          abbrev=$(hash_filepath "$filepath")
-          abbrev=$(hash_to_letters "$abbrev")
-
-          # Avoid collisions with both used abbrevs AND unassigned abbrevs (like status.sh)
-          while [[ -n "${used_abbrevs[$abbrev]:-}" ]] || [[ -n "${unassigned_abbrevs_map[$abbrev]:-}" ]]; do
-            abbrev=$(find_next_abbrev "$abbrev")
-          done
-
-          temp_abbrevs["$abbrev"]="$filepath"
-          used_abbrevs["$abbrev"]=1
-        done <<< "$uncommitted_files"
-
-        if [[ -n "${temp_abbrevs[$file_or_pattern]:-}" ]]; then
-          resolved_file="${temp_abbrevs[$file_or_pattern]}"
+        if [[ -n "$temp_resolved" ]]; then
+          resolved_file="$temp_resolved"
           info "Resolved abbreviation '${file_or_pattern}' to '${resolved_file}'"
         fi
       fi
