@@ -108,29 +108,16 @@ cmd_unassign() {
 
     success "Unassigned all files from '${worktree_name}'"
     info "Files are now uncommitted in worktree-staging"
+    echo ""
+    source "${WT_ROOT}/commands/status.sh"
+    cmd_status
     exit 0
-  fi
-
-  # Resolve file path
-  local filepath=""
-  if [[ ${#file_or_abbrev} -eq 2 ]]; then
-    # Try as abbreviation first (though it won't be in abbreviations if assigned)
-    local temp_path
-    temp_path=$(get_filepath_from_abbrev "$file_or_abbrev")
-
-    if [[ -n "$temp_path" ]]; then
-      filepath="$temp_path"
-    else
-      # Treat as file path
-      filepath="$file_or_abbrev"
-    fi
-  else
-    filepath="$file_or_abbrev"
   fi
 
   # Find the commit that assigned this file to this worktree
   info "Searching for assignment commit..."
 
+  local filepath="$file_or_abbrev"
   local commit_sha=""
   local commit_msg="wt: assign ${filepath} to ${worktree_name}"
 
@@ -179,6 +166,9 @@ cmd_unassign() {
         popd > /dev/null 2>&1
       fi
     fi
+    echo ""
+    source "${WT_ROOT}/commands/status.sh"
+    cmd_status
   else
     error "Failed to revert commit. There may be conflicts."
   fi
