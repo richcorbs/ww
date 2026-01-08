@@ -34,9 +34,7 @@ Commands:
   list              List all worktrees
   assign            Assign a file to a worktree
   unassign          Unassign a file from a worktree
-  stage             Stage files in a worktree for selective commits
-  unstage           Unstage files in a worktree
-  commit            Commit changes in a worktree
+  commit            Commit changes in a worktree (with interactive file selection)
   uncommit          Uncommit last commit in a worktree
   apply             Apply worktree commits to staging
   unapply           Unapply worktree commits from staging

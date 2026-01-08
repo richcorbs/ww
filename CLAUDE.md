@@ -21,9 +21,8 @@
 
 ### Command Argument Order
 - `wt assign <worktree> [file]` (worktree FIRST, file second or omit for fzf)
-- `wt commit <worktree> [message]` (worktree FIRST, message optional - prompts if omitted)
-- `wt stage <worktree> [file]` (worktree FIRST, file optional - fzf if omitted)
-- `wt unstage <worktree> [file]` (worktree FIRST, file optional - fzf if omitted)
+- `wt commit <worktree> [message]` (worktree FIRST, always uses fzf, message pre-fills prompt)
+- `wt unassign <worktree> [file]` (worktree FIRST, file optional - defaults to all if omitted)
 
 ### Status Display Format Swap
 - Git's `git status --porcelain` returns XY format (X=staged, Y=unstaged)
@@ -33,22 +32,21 @@
 - `A ` (git's format: staged addition) displays as ` A`
 - `MM` (git's format: staged and also modified) displays as `MM`
 - See `commands/status.sh` lines 92-108 and 298-315
-- Also applied in `commands/commit.sh` and `commands/stage.sh` for fzf display
+- Also applied in `commands/commit.sh` for fzf display
 
 ### Auto-Status
 - All commands that modify state show `wt status` after success
 - Pattern: `source "${WT_ROOT}/commands/status.sh" && cmd_status`
-- Commands: assign, unassign, stage, unstage, commit, uncommit, apply, unapply, push, pr, sync, create
+- Commands: assign, unassign, commit, uncommit, apply, unapply, push, pr, sync, create
 
 ### fzf Integration
 - All file selection uses fzf multi-select when file argument omitted
 - "[All files]" option always available as first item
 - Vim keybindings: Ctrl+j/k (up/down), Ctrl+d/u (page down/up)
 - TAB to select/deselect files, ENTER to confirm
-- Pattern in assign, stage, commit, unstage commands
-- Files are filtered based on context:
-  - `wt stage`: Only shows files with unstaged changes (Y != space in XY format)
-  - `wt unstage`: Only shows files with staged changes (X != space in XY format)
+- Pattern in assign and commit commands
+- `wt commit` marks staged files with [S] indicator
+- Directory selection supported with "DIR" prefix
 
 ## File Structure
 
@@ -63,13 +61,12 @@
 - `.worktree-flow/abbreviations.json` - No longer used (can be removed)
 
 ### Key Commands to Know
-- `status.sh` - Shows applied/pushed/staged indicators with YX format, no redundant branch display
-- `assign.sh` - Auto-creates worktrees, fzf selection, swapped arg order
-- `create.sh` - Simplified to single argument
+- `status.sh` - Shows applied/pushed indicators with YX format, no redundant branch display
+- `assign.sh` - Auto-creates worktrees, fzf selection, handles deleted files
+- `unassign.sh` - Uses patches to restore files (not git revert), avoids conflicts
+- `create.sh` - Simplified to single argument (branch name = worktree name)
 - `sync.sh` - Merges main into worktree-staging, auto-cleans merged branches
-- `stage.sh` - fzf support, filters out fully-staged files
-- `commit.sh` - fzf support, optional message
-- `unstage.sh` - fzf support, shows only staged files
+- `commit.sh` - Always uses fzf with [S] indicator for staged files, message pre-fill support
 
 ## Status Indicators
 
@@ -162,10 +159,16 @@ fi
 
 ## Recent Changes (as of Jan 2026)
 
-- Swapped file status display to YX format in status.sh, commit.sh, stage.sh
+- Swapped file status display to YX format in status.sh, commit.sh
 - Removed abbreviations.sh entirely and all `get_filepath_from_abbrev` calls
-- Added fzf to unstage.sh with same patterns as stage.sh
-- Filtered fully-staged files from wt stage fzf selection
+- **Removed wt stage and wt unstage commands** - simplified workflow uses only wt commit
+- Refactored wt commit to always use fzf with [S] indicator for staged files
+- wt commit now pre-fills message prompt if message provided via command line
+- Fixed merge conflict in unstage.sh (removed old abbreviation code)
+- Refactored wt unassign to use patches instead of git revert (avoids conflicts)
+- Fixed wt assign to handle deleted files properly
+- Added directory selection to fzf in all commands
+- Fixed applied/not applied indicator to check for assignment commits in worktree-staging
 - Removed redundant branch display from wt status (show name only)
 - Test suite needs updating for simplified commands
 
