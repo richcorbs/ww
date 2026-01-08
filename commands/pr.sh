@@ -70,6 +70,29 @@ cmd_pr() {
     error "No origin remote found. Please add a remote first."
   fi
 
+  # Check if branch is pushed to origin, push if not
+  if ! git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+    info "Branch '$branch' not yet pushed to origin. Pushing now..."
+
+    local repo_root
+    repo_root=$(get_repo_root)
+    local worktree_path
+    worktree_path=$(get_worktree_path "$worktree_name")
+    local abs_path="${repo_root}/${worktree_path}"
+
+    if pushd "$abs_path" > /dev/null 2>&1; then
+      if git push -u origin "$branch" 2>&1; then
+        success "Pushed branch '${branch}' to origin"
+      else
+        popd > /dev/null 2>&1
+        error "Failed to push branch '${branch}' to origin"
+      fi
+      popd > /dev/null 2>&1
+    else
+      error "Could not access worktree at: ${abs_path}"
+    fi
+  fi
+
   # Parse GitHub URL
   # Handle both HTTPS and SSH formats
   local github_url=""
