@@ -3,30 +3,30 @@
 
 show_help() {
   cat <<EOF
-Usage: wt unassign <file|abbreviation|.> <worktree>
+Usage: wt unassign <worktree> [file|.]
 
 Unassign file(s) from a worktree by reverting their commits in worktree-staging
 and removing the changes from the worktree. The files will show up as
 "unassigned" again.
 
 Arguments:
-  file|abbreviation|.  File path, two-letter abbreviation, or . for all assigned files
-  worktree             Name of the worktree
+  worktree     Name of the worktree
+  file|.|      Optional: File path, directory, or . for all assigned files
 
 Options:
   -h, --help    Show this help message
 
 Examples:
-  wt unassign ab feature-auth                # Single file by abbreviation
-  wt unassign app/models/user.rb feature-auth # Single file by path
-  wt unassign . feature-auth                 # All uncommitted files assigned to the worktree
+  wt unassign feature-auth                    # Unassign all files
+  wt unassign feature-auth app/models/user.rb # Single file by path
+  wt unassign feature-auth .                  # All uncommitted files assigned to the worktree
 EOF
 }
 
 cmd_unassign() {
   # Parse arguments
-  local file_or_abbrev=""
   local worktree_name=""
+  local file_or_abbrev=""
 
   while [[ $# -gt 0 ]]; do
     case $1 in
@@ -35,10 +35,10 @@ cmd_unassign() {
         exit 0
         ;;
       *)
-        if [[ -z "$file_or_abbrev" ]]; then
-          file_or_abbrev="$1"
-        elif [[ -z "$worktree_name" ]]; then
+        if [[ -z "$worktree_name" ]]; then
           worktree_name="$1"
+        elif [[ -z "$file_or_abbrev" ]]; then
+          file_or_abbrev="$1"
         else
           error "Too many arguments"
         fi
@@ -48,12 +48,13 @@ cmd_unassign() {
   done
 
   # Validate arguments
-  if [[ -z "$file_or_abbrev" ]]; then
-    error "Missing required argument: file or abbreviation"
-  fi
-
   if [[ -z "$worktree_name" ]]; then
     error "Missing required argument: worktree"
+  fi
+
+  # Default to all files if no file specified
+  if [[ -z "$file_or_abbrev" ]]; then
+    file_or_abbrev="."
   fi
 
   # Ensure initialized
