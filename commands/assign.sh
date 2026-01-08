@@ -5,7 +5,7 @@ show_help() {
   cat <<EOF
 Usage: wt assign <worktree> [file|directory|.]
 
-Assign uncommitted changes to a worktree and commit them to worktree-staging.
+Assign uncommitted changes to a worktree and commit them to wt-working.
 
 Arguments:
   worktree            Name of the worktree
@@ -63,21 +63,19 @@ cmd_assign() {
     local repo_root
     repo_root=$(get_repo_root)
 
-    # Ensure we're on worktree-staging
+    # Ensure we're on wt-working
     local current_branch
     current_branch=$(git branch --show-current)
-    if [[ "$current_branch" != "worktree-staging" ]]; then
-      git checkout worktree-staging > /dev/null 2>&1
+    if [[ "$current_branch" != "wt-working" ]]; then
+      git checkout wt-working > /dev/null 2>&1
     fi
 
     # Path is always .worktrees/<branch>
     local worktree_path=".worktrees/${worktree_name}"
     local abs_path="${repo_root}/${worktree_path}"
 
-    # Create the worktree from worktree-staging
-    if git worktree add -b "$worktree_name" "$abs_path" worktree-staging 2>&1; then
-      # Add to metadata
-      add_worktree_metadata "$worktree_name" "$worktree_name" "$worktree_path"
+    # Create the worktree from wt-working
+    if git worktree add -b "$worktree_name" "$abs_path" wt-working 2>&1; then
       success "Created worktree '$worktree_name'"
       echo ""
     else
@@ -110,8 +108,19 @@ cmd_assign() {
       error "fzf is required for interactive selection. Install fzf or specify files directly."
     fi
 
+    # Extract directories using shared function
+    local unique_dirs
+    unique_dirs=$(extract_directories "$all_files")
+
     # Build file list with git status indicators
     local file_list="*  [All files]"$'\n'
+
+    # Add directories first
+    while IFS= read -r dir; do
+      [[ -n "$dir" ]] && file_list+="D  ${dir}/"$'\n'
+    done <<< "$unique_dirs"
+
+    # Add individual files
     while IFS= read -r file; do
       local status="  "
 
@@ -144,10 +153,13 @@ cmd_assign() {
         files_to_assign+=("$file")
       done <<< "$all_files"
     else
-      # Assign selected files
+      # Expand directories using shared function
+      local expanded_files
+      expanded_files=$(expand_directory_selections "$selected_files" "$all_files")
+
       while IFS= read -r file; do
         [[ -n "$file" ]] && files_to_assign+=("$file")
-      done <<< "$selected_files"
+      done <<< "$expanded_files"
     fi
 
   elif [[ "$file_or_pattern" == "*" ]] || [[ "$file_or_pattern" == "." ]]; then
@@ -225,7 +237,7 @@ cmd_assign() {
       git add -u "$filepath" 2>/dev/null || git rm "$filepath" 2>/dev/null || true
     fi
 
-    # Commit the file to worktree-staging
+    # Commit the file to wt-working
     if git commit -m "wt: assign ${filepath} to ${worktree_name}"; then
       local commit_sha
       commit_sha=$(git rev-parse HEAD)
@@ -269,7 +281,7 @@ cmd_assign() {
   done
 
   if [[ $assigned_count -eq ${#files_to_assign[@]} ]]; then
-    success "Assigned ${assigned_count} file(s) to '${worktree_name}' and committed to worktree-staging"
+    success "Assigned ${assigned_count} file(s) to '${worktree_name}' and committed to wt-working"
     echo ""
     # Show updated status
     source "${WT_ROOT}/commands/status.sh"
