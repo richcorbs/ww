@@ -72,6 +72,45 @@ cmd_unassign() {
     error "Worktree '$worktree_name' not found"
   fi
 
+  # Check if unassigning all files
+  if [[ "$file_or_abbrev" == "." ]]; then
+    info "Unassigning all files from '${worktree_name}'..."
+
+    # Find all assignment commits for this worktree
+    local commit_pattern="wt: assign .* to ${worktree_name}"
+    local commits_to_revert=()
+
+    while IFS= read -r sha; do
+      local msg
+      msg=$(git log -1 --format="%s" "$sha")
+
+      if [[ "$msg" =~ ^wt:\ assign\ .*\ to\ ${worktree_name}$ ]]; then
+        commits_to_revert+=("$sha")
+      fi
+    done < <(git log --format="%H" -n 100)  # Search last 100 commits
+
+    if [[ ${#commits_to_revert[@]} -eq 0 ]]; then
+      warn "No assignment commits found for '${worktree_name}'"
+      exit 0
+    fi
+
+    info "Found ${#commits_to_revert[@]} assignment commit(s) to revert"
+
+    # Revert commits in reverse order (newest first)
+    for commit_sha in "${commits_to_revert[@]}"; do
+      local short_sha
+      short_sha=$(git rev-parse --short "$commit_sha")
+
+      if ! git revert --no-edit "$commit_sha" 2>&1; then
+        error "Failed to revert commit ${short_sha}. There may be conflicts."
+      fi
+    done
+
+    success "Unassigned all files from '${worktree_name}'"
+    info "Files are now uncommitted in worktree-staging"
+    exit 0
+  fi
+
   # Resolve file path
   local filepath=""
   if [[ ${#file_or_abbrev} -eq 2 ]]; then
