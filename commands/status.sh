@@ -89,16 +89,6 @@ cmd_status() {
   local all_files
   all_files=$(echo -e "${changed_files}\n${staged_files}\n${untracked_files}" | sort -u | grep -v '^$' || true)
 
-  # Generate abbreviations for all files
-  if [[ -n "$all_files" ]]; then
-    local files_array=()
-    while IFS= read -r file; do
-      files_array+=("$file")
-    done <<< "$all_files"
-
-    generate_abbreviations_for_files "${files_array[@]}"
-  fi
-
   # Display unassigned changes
   echo "  Unassigned changes:"
   if [[ -z "$all_files" ]]; then
@@ -107,24 +97,19 @@ cmd_status() {
     # Pre-build associative arrays for file status (O(n) instead of O(n²))
     declare -A file_status_map
     while IFS= read -r file; do
-      [[ -n "$file" ]] && file_status_map["$file"]="? "
+      [[ -n "$file" ]] && file_status_map["$file"]="?"
     done <<< "$untracked_files"
     while IFS= read -r file; do
-      [[ -n "$file" ]] && file_status_map["$file"]="A "
+      [[ -n "$file" ]] && file_status_map["$file"]="A"
     done <<< "$staged_files"
     while IFS= read -r file; do
-      [[ -n "$file" ]] && file_status_map["$file"]="M "
+      [[ -n "$file" ]] && file_status_map["$file"]="M"
     done <<< "$changed_files"
 
-    # Read abbreviations once (not per file!)
-    local abbrevs_json
-    abbrevs_json=$(read_abbreviations)
-
+    # Display files with status
     while IFS= read -r file; do
-      local abbrev
-      abbrev=$(echo "$abbrevs_json" | jq -r --arg fp "$file" '.[$fp] // empty')
       local status="${file_status_map[$file]}"
-      echo -e "    ${YELLOW}${abbrev}${NC}  ${status} ${file}"
+      echo -e "    ${status}  ${file}"
     done <<< "$all_files"
   fi
 
@@ -138,20 +123,12 @@ cmd_status() {
     echo "  Worktrees:"
     echo "    (none)"
     echo ""
-    info "  Use 'wt create <name> <branch>' to create a worktree"
+    info "  Use 'wt create <branch>' to create a worktree"
   else
     echo "  Worktrees:"
 
     local repo_root
     repo_root=$(get_repo_root)
-
-    # Pre-load unassigned abbreviations once (not per worktree)
-    declare -A unassigned_abbrevs_map
-    local unassigned_abbrevs_list
-    unassigned_abbrevs_list=$(read_abbreviations 2>/dev/null | jq -r '.[]' 2>/dev/null || echo "")
-    while IFS= read -r abbrev; do
-      [[ -n "$abbrev" ]] && unassigned_abbrevs_map["$abbrev"]=1
-    done <<< "$unassigned_abbrevs_list"
 
     # Determine main branch once
     local main_branch="main"
@@ -205,6 +182,35 @@ cmd_status() {
         popd > /dev/null 2>&1
       fi
 
+      # Check if commits have been applied to worktree-staging
+      local applied_status=""
+      if [[ "$commit_count" -gt 0 ]]; then
+        # Check if the worktree commits exist in worktree-staging (by checking patch-id)
+        local unapplied_count=0
+        if pushd "$abs_path" > /dev/null 2>&1; then
+          # Get patch-ids of commits in worktree but not in worktree-staging
+          local worktree_patches
+          worktree_patches=$(git log --format='%H' worktree-staging..HEAD 2>/dev/null | while read commit; do git show "$commit" | git patch-id --stable 2>/dev/null | awk '{print $1}'; done)
+
+          if [[ -n "$worktree_patches" ]]; then
+            # Check each patch to see if it exists in worktree-staging
+            while IFS= read -r patch_id; do
+              # Search worktree-staging for this patch-id
+              if ! git log --format='%H' worktree-staging --max-count=100 2>/dev/null | while read staging_commit; do git show "$staging_commit" | git patch-id --stable 2>/dev/null | awk '{print $1}'; done | grep -q "^${patch_id}$"; then
+                unapplied_count=$((unapplied_count + 1))
+              fi
+            done <<< "$worktree_patches"
+          fi
+          popd > /dev/null 2>&1
+        fi
+
+        if [[ "$unapplied_count" -eq 0 ]]; then
+          applied_status=" ${GREEN}[applied]${NC}"
+        else
+          applied_status=" ${YELLOW}[not applied]${NC}"
+        fi
+      fi
+
       local status_parts=()
       if [[ "$uncommitted_count" -gt 0 ]]; then
         status_parts+=("${uncommitted_count} uncommitted")
@@ -215,7 +221,7 @@ cmd_status() {
 
       local status_str=""
       if [[ ${#status_parts[@]} -gt 0 ]]; then
-        status_str=" - $(IFS=", "; echo "${status_parts[*]}")"
+        status_str=" - $(IFS=", "; echo "${status_parts[*]}")${applied_status}"
       fi
 
       # Check if branch has been merged into main
@@ -265,37 +271,16 @@ cmd_status() {
 
       # Show uncommitted files if any
       if [[ ${#uncommitted_files[@]} -gt 0 ]]; then
-        # Generate display-only abbreviations for worktree files (sequential to avoid conflicts)
-        declare -A temp_abbrevs
-        declare -A used_abbrevs  # Use associative array for O(1) lookups
-
-        for file_status in "${uncommitted_files[@]}"; do
-          local filepath="${file_status:3}"
-
-          # Generate abbreviation based on filepath
-          local abbrev
-          abbrev=$(hash_filepath "$filepath")
-          abbrev=$(hash_to_letters "$abbrev")
-
-          # Check for collisions and find next available (O(1) lookups)
-          while [[ -n "${used_abbrevs[$abbrev]:-}" ]] || [[ -n "${unassigned_abbrevs_map[$abbrev]:-}" ]]; do
-            abbrev=$(find_next_abbrev "$abbrev")
-          done
-
-          temp_abbrevs["$filepath"]="$abbrev"
-          used_abbrevs["$abbrev"]=1
-        done
-
-        # Display with abbreviations
         for file_status in "${uncommitted_files[@]}"; do
           local status_code="${file_status:0:2}"
-          # Format status: if starts with space, use second char + space for alignment
+          # Format status: if starts with space, use second char for alignment
           if [[ "$status_code" == " "* ]]; then
-            status_code="${status_code:1:1} "
+            status_code="${status_code:1:1}"
+          else
+            status_code="${status_code:0:1}"
           fi
           local filepath="${file_status:3}"
-          local abbrev="${temp_abbrevs[$filepath]}"
-          echo -e "      ${YELLOW}${abbrev}${NC}  ${status_code}  ${filepath}"
+          echo -e "      ${status_code}  ${filepath}"
         done
       fi
 
