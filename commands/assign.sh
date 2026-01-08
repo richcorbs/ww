@@ -69,8 +69,8 @@ cmd_assign() {
     # Ensure we're on wt-working
     local current_branch
     current_branch=$(git branch --show-current)
-    if [[ "$current_branch" != "wt-working" ]]; then
-      git checkout wt-working > /dev/null 2>&1
+    if [[ "$current_branch" != "${WT_BRANCH}" ]]; then
+      git checkout ${WT_BRANCH} > /dev/null 2>&1
     fi
 
     # Path is always .worktrees/<branch>
@@ -78,7 +78,7 @@ cmd_assign() {
     local abs_path="${repo_root}/${worktree_path}"
 
     # Create the worktree from wt-working
-    if git worktree add -b "$worktree_name" "$abs_path" wt-working 2>&1; then
+    if git worktree add -b "$worktree_name" "$abs_path" ${WT_BRANCH} 2>&1; then
       success "Created worktree '$worktree_name'"
       echo ""
     else
