@@ -97,9 +97,14 @@ cmd_unstage() {
     # Resolve file path
     local filepath=""
     if [[ ${#file_or_abbrev} -eq 2 ]]; then
-      # Try as abbreviation first
+      # Try as abbreviation first - get uncommitted files
+      local uncommitted_files_array=()
+      while IFS= read -r line; do
+        [[ -n "$line" ]] && uncommitted_files_array+=("${line:3}")
+      done < <(git status --porcelain 2>/dev/null)
+
       local temp_path
-      temp_path=$(get_filepath_from_abbrev "$file_or_abbrev")
+      temp_path=$(get_filepath_from_abbrev "$file_or_abbrev" "${uncommitted_files_array[@]}")
 
       if [[ -n "$temp_path" ]]; then
         filepath="$temp_path"
