@@ -107,26 +107,65 @@ cmd_sync() {
         if git branch --merged "${source_branch}" | grep -q "^[*+ ]*${branch}$"; then
           info "Branch '${branch}' has been merged into ${source_branch}"
 
-          # Remove worktree
-          info "  Removing worktree '${name}'..."
-          if git worktree remove ".worktrees/${name}" --force 2>/dev/null; then
-            # Remove metadata
-            remove_worktree_metadata "$name"
+          # Check for uncommitted changes
+          local repo_root
+          repo_root=$(get_repo_root)
+          local worktree_path
+          worktree_path=$(get_worktree_path "$name")
+          local abs_path="${repo_root}/${worktree_path}"
 
-            # Delete local branch
-            info "  Deleting local branch '${branch}'..."
-            git branch -d "${branch}" >/dev/null 2>&1 || git branch -D "${branch}" >/dev/null 2>&1
+          local uncommitted_count=0
+          if [[ -d "$abs_path" ]]; then
+            if pushd "$abs_path" > /dev/null 2>&1; then
+              uncommitted_count=$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+              popd > /dev/null 2>&1
+            fi
+          fi
+
+          if [[ "$uncommitted_count" -gt 0 ]]; then
+            # Has uncommitted changes - recreate branch from updated worktree-staging
+            info "  Worktree '${name}' has ${uncommitted_count} uncommitted change(s)"
+            info "  Recreating branch '${branch}' from updated worktree-staging..."
+
+            # Delete old branch
+            git branch -D "${branch}" >/dev/null 2>&1
+
+            # Create new branch from worktree-staging in the worktree
+            if pushd "$abs_path" > /dev/null 2>&1; then
+              git checkout -b "${branch}" worktree-staging >/dev/null 2>&1
+              popd > /dev/null 2>&1
+            fi
 
             # Delete remote branch if it exists
             if git ls-remote --exit-code --heads origin "${branch}" >/dev/null 2>&1; then
               info "  Deleting remote branch '${branch}'..."
-              git push origin --delete "${branch}" 2>/dev/null || warn "  Failed to delete remote branch"
+              git push origin --delete "${branch}" >/dev/null 2>&1 || warn "  Failed to delete remote branch"
             fi
 
-            success "  Cleaned up '${name}'"
-            cleaned_count=$((cleaned_count + 1))
+            success "  Recreated '${name}' with latest code, uncommitted changes preserved"
+            echo ""
           else
-            warn "  Failed to remove worktree '${name}'"
+            # No uncommitted changes - clean up completely
+            info "  Removing worktree '${name}'..."
+            if git worktree remove ".worktrees/${name}" --force 2>/dev/null; then
+              # Remove metadata
+              remove_worktree_metadata "$name"
+
+              # Delete local branch
+              info "  Deleting local branch '${branch}'..."
+              git branch -d "${branch}" >/dev/null 2>&1 || git branch -D "${branch}" >/dev/null 2>&1
+
+              # Delete remote branch if it exists
+              if git ls-remote --exit-code --heads origin "${branch}" >/dev/null 2>&1; then
+                info "  Deleting remote branch '${branch}'..."
+                git push origin --delete "${branch}" 2>/dev/null || warn "  Failed to delete remote branch"
+              fi
+
+              success "  Cleaned up '${name}'"
+              cleaned_count=$((cleaned_count + 1))
+            else
+              warn "  Failed to remove worktree '${name}'"
+            fi
           fi
           echo ""
         fi
