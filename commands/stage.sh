@@ -75,7 +75,55 @@ cmd_stage() {
 
   # Enter worktree and stage
   if pushd "$abs_worktree_path" > /dev/null 2>&1; then
-    if [[ "$file_or_pattern" == "*" ]]; then
+    # Resolve abbreviation if needed
+    local resolved_file="$file_or_pattern"
+    if [[ ${#file_or_pattern} -eq 2 ]] && [[ ! -f "$file_or_pattern" ]] && [[ ! -d "$file_or_pattern" ]]; then
+      # Might be an abbreviation - try to resolve from uncommitted files
+      local uncommitted_files
+      uncommitted_files=$(git status --porcelain 2>/dev/null || true)
+
+      if [[ -n "$uncommitted_files" ]]; then
+        # Load unassigned abbreviations to avoid collisions (same as status.sh does)
+        declare -A unassigned_abbrevs_map
+        local unassigned_abbrevs_list
+
+        # Need to temporarily go back to repo root to read abbreviations
+        popd > /dev/null 2>&1
+        unassigned_abbrevs_list=$(read_abbreviations 2>/dev/null | jq -r '.[]' 2>/dev/null || echo "")
+        while IFS= read -r abbrev; do
+          [[ -n "$abbrev" ]] && unassigned_abbrevs_map["$abbrev"]=1
+        done <<< "$unassigned_abbrevs_list"
+        pushd "$abs_worktree_path" > /dev/null 2>&1
+
+        # Generate abbreviations for uncommitted files and find match
+        declare -A temp_abbrevs
+        declare -A used_abbrevs
+
+        while IFS= read -r line; do
+          [[ -z "$line" ]] && continue
+          local filepath="${line:3}"
+
+          local abbrev
+          abbrev=$(hash_filepath "$filepath")
+          abbrev=$(hash_to_letters "$abbrev")
+
+          # Avoid collisions with both used abbrevs AND unassigned abbrevs (like status.sh)
+          while [[ -n "${used_abbrevs[$abbrev]:-}" ]] || [[ -n "${unassigned_abbrevs_map[$abbrev]:-}" ]]; do
+            abbrev=$(find_next_abbrev "$abbrev")
+          done
+
+          temp_abbrevs["$abbrev"]="$filepath"
+          used_abbrevs["$abbrev"]=1
+        done <<< "$uncommitted_files"
+
+        if [[ -n "${temp_abbrevs[$file_or_pattern]:-}" ]]; then
+          resolved_file="${temp_abbrevs[$file_or_pattern]}"
+          info "Resolved abbreviation '${file_or_pattern}' to '${resolved_file}'"
+        fi
+      fi
+    fi
+
+    if [[ "$resolved_file" == "*" ]] || [[ "$resolved_file" == "." ]]; then
       # Stage all files
       info "Staging all files in '${worktree_name}'..."
       if git add -A 2>&1; then
@@ -87,23 +135,23 @@ cmd_stage() {
         popd > /dev/null 2>&1
         error "Failed to stage files"
       fi
-    elif [[ -d "$file_or_pattern" ]]; then
+    elif [[ -d "$resolved_file" ]]; then
       # Stage directory
-      info "Staging files in ${file_or_pattern}..."
-      if git add "$file_or_pattern" 2>&1; then
+      info "Staging files in ${resolved_file}..."
+      if git add "$resolved_file" 2>&1; then
         local staged_count
-        staged_count=$(git diff --cached --name-only | grep "^${file_or_pattern%/}/" | wc -l | tr -d ' ')
+        staged_count=$(git diff --cached --name-only | grep "^${resolved_file%/}/" | wc -l | tr -d ' ')
         popd > /dev/null 2>&1
-        success "Staged ${staged_count} file(s) from ${file_or_pattern} in '${worktree_name}'"
+        success "Staged ${staged_count} file(s) from ${resolved_file} in '${worktree_name}'"
       else
         popd > /dev/null 2>&1
         error "Failed to stage directory"
       fi
     else
       # Stage single file
-      if git add "$file_or_pattern" 2>&1; then
+      if git add "$resolved_file" 2>&1; then
         popd > /dev/null 2>&1
-        success "Staged '${file_or_pattern}' in '${worktree_name}'"
+        success "Staged '${resolved_file}' in '${worktree_name}'"
       else
         popd > /dev/null 2>&1
         error "Failed to stage file"
