@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Undo the last commit in a worktree
+# Uncommit the last commit in a worktree
 
 show_help() {
   cat <<EOF
-Usage: wt undo <worktree>
+Usage: wt uncommit <worktree>
 
-Undo the last commit in a worktree by resetting by one commit.
+Uncommit the last commit in a worktree by resetting by one commit.
 Brings the changes back to uncommitted state in that worktree.
 
 Arguments:
@@ -15,11 +15,11 @@ Options:
   -h, --help    Show this help message
 
 Example:
-  wt undo feature-auth
+  wt uncommit feature-auth
 EOF
 }
 
-cmd_undo() {
+cmd_uncommit() {
   # Parse arguments
   local worktree_name=""
 
@@ -72,7 +72,7 @@ cmd_undo() {
 
     if [[ "$commit_count" -eq 0 ]]; then
       popd > /dev/null 2>&1
-      warn "No commits to undo in '${worktree_name}'"
+      warn "No commits to uncommit in '${worktree_name}'"
       exit 0
     fi
 
@@ -86,21 +86,21 @@ cmd_undo() {
     info "Last commit in '${worktree_name}': ${last_commit_sha} - ${last_commit_msg}"
 
     # Ask for confirmation
-    read -rp "Undo this commit? (y/N) " response
+    read -rp "Uncommit this commit? (y/N) " response
     if [[ ! "$response" =~ ^[Yy]$ ]]; then
       popd > /dev/null 2>&1
-      info "Undo cancelled"
+      info "Uncommit cancelled"
       exit 0
     fi
 
     # Reset to previous commit, keeping changes
     if git reset HEAD~1 2>&1; then
       popd > /dev/null 2>&1
-      success "Undid last commit in '${worktree_name}': ${last_commit_sha}"
+      success "Uncommitted last commit in '${worktree_name}': ${last_commit_sha}"
       info "Changes are now uncommitted in the worktree"
     else
       popd > /dev/null 2>&1
-      error "Failed to undo commit"
+      error "Failed to uncommit"
     fi
   else
     error "Failed to enter worktree directory"

@@ -106,7 +106,7 @@ cmd_status() {
     # Pre-build associative arrays for file status (O(n) instead of O(n²))
     declare -A file_status_map
     while IFS= read -r file; do
-      [[ -n "$file" ]] && file_status_map["$file"]="??"
+      [[ -n "$file" ]] && file_status_map["$file"]="? "
     done <<< "$untracked_files"
     while IFS= read -r file; do
       [[ -n "$file" ]] && file_status_map["$file"]="A "
@@ -115,9 +115,13 @@ cmd_status() {
       [[ -n "$file" ]] && file_status_map["$file"]="M "
     done <<< "$changed_files"
 
+    # Read abbreviations once (not per file!)
+    local abbrevs_json
+    abbrevs_json=$(read_abbreviations)
+
     while IFS= read -r file; do
       local abbrev
-      abbrev=$(get_abbreviation "$file")
+      abbrev=$(echo "$abbrevs_json" | jq -r --arg fp "$file" '.[$fp] // empty')
       local status="${file_status_map[$file]}"
       echo -e "    ${YELLOW}${abbrev}${NC}  ${status} ${file}"
     done <<< "$all_files"
@@ -140,6 +144,31 @@ cmd_status() {
     local repo_root
     repo_root=$(get_repo_root)
 
+    # Pre-load unassigned abbreviations once (not per worktree)
+    declare -A unassigned_abbrevs_map
+    local unassigned_abbrevs_list
+    unassigned_abbrevs_list=$(read_abbreviations 2>/dev/null | jq -r '.[]' 2>/dev/null || echo "")
+    while IFS= read -r abbrev; do
+      [[ -n "$abbrev" ]] && unassigned_abbrevs_map["$abbrev"]=1
+    done <<< "$unassigned_abbrevs_list"
+
+    # Determine main branch once
+    local main_branch="main"
+    local check_branch=""
+    if git show-ref --verify --quiet refs/remotes/origin/main; then
+      check_branch="origin/main"
+      main_branch="main"
+    elif git show-ref --verify --quiet refs/remotes/origin/master; then
+      check_branch="origin/master"
+      main_branch="master"
+    elif git show-ref --verify --quiet refs/heads/main; then
+      check_branch="main"
+      main_branch="main"
+    elif git show-ref --verify --quiet refs/heads/master; then
+      check_branch="master"
+      main_branch="master"
+    fi
+
     while IFS= read -r name; do
       local branch
       branch=$(get_worktree_branch "$name")
@@ -155,9 +184,10 @@ cmd_status() {
         continue
       fi
 
-      # Get uncommitted files in worktree
+      # Get uncommitted files and commit count in one pushd
       local uncommitted_files=()
       local uncommitted_count=0
+      local commit_count=0
       if pushd "$abs_path" > /dev/null 2>&1; then
         uncommitted_count=$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')
 
@@ -168,13 +198,9 @@ cmd_status() {
           done < <(git status --porcelain 2>/dev/null)
         fi
 
-        popd > /dev/null 2>&1
-      fi
-
-      # Count commits not in worktree-staging
-      local commit_count=0
-      if pushd "$abs_path" > /dev/null 2>&1; then
+        # Count commits not in worktree-staging
         commit_count=$(git rev-list --count "worktree-staging..HEAD" 2>/dev/null || echo "0")
+
         popd > /dev/null 2>&1
       fi
 
@@ -191,26 +217,8 @@ cmd_status() {
         status_str=" - $(IFS=", "; echo "${status_parts[*]}")"
       fi
 
-      # Check if branch has been merged into main (check remote first, then local)
+      # Check if branch has been merged into main
       local is_merged=false
-      local main_branch="main"
-      local check_branch=""
-
-      # Prefer checking against origin/main if it exists
-      if git show-ref --verify --quiet refs/remotes/origin/main; then
-        check_branch="origin/main"
-        main_branch="main"
-      elif git show-ref --verify --quiet refs/remotes/origin/master; then
-        check_branch="origin/master"
-        main_branch="master"
-      elif git show-ref --verify --quiet refs/heads/main; then
-        check_branch="main"
-        main_branch="main"
-      elif git show-ref --verify --quiet refs/heads/master; then
-        check_branch="master"
-        main_branch="master"
-      fi
-
       if [[ -n "$check_branch" ]] && git branch --merged "$check_branch" 2>/dev/null | grep -q "^[*+ ]*${branch}$"; then
         is_merged=true
       fi
@@ -259,14 +267,6 @@ cmd_status() {
         # Generate display-only abbreviations for worktree files (sequential to avoid conflicts)
         declare -A temp_abbrevs
         declare -A used_abbrevs  # Use associative array for O(1) lookups
-
-        # Get current unassigned file abbreviations to avoid conflicts
-        declare -A unassigned_abbrevs_map
-        local unassigned_abbrevs_list
-        unassigned_abbrevs_list=$(read_abbreviations 2>/dev/null | jq -r '.[]' 2>/dev/null || echo "")
-        while IFS= read -r abbrev; do
-          [[ -n "$abbrev" ]] && unassigned_abbrevs_map["$abbrev"]=1
-        done <<< "$unassigned_abbrevs_list"
 
         for file_status in "${uncommitted_files[@]}"; do
           local filepath="${file_status:3}"

@@ -50,22 +50,15 @@ cmd_init() {
   local current_branch
   current_branch=$(git branch --show-current)
 
-  if git show-ref --verify --quiet refs/heads/worktree-staging; then
-    # Branch exists, check it out
-    info "Checking out existing worktree-staging branch..."
-    git checkout worktree-staging
-  else
-    # Create new branch from current branch
-    info "Creating worktree-staging branch from ${current_branch}..."
-    git checkout -b worktree-staging
-  fi
-
   # Create .worktree-flow directory
-  info "Creating ${WT_FLOW_DIR} directory..."
   mkdir -p "${repo_root}/${WT_FLOW_DIR}"
+  success "Created .worktree-flow directory"
+
+  # Create .worktrees directory
+  mkdir -p "${repo_root}/.worktrees"
+  success "Created .worktrees directory"
 
   # Create initial metadata.json
-  info "Creating metadata files..."
   echo '{"worktrees": {}, "applied_commits": {}}' | jq '.' > "${repo_root}/${METADATA_FILE}"
   echo '{}' | jq '.' > "${repo_root}/${ABBREV_FILE}"
 
@@ -75,20 +68,21 @@ cmd_init() {
 
   if [[ -f "$gitignore" ]]; then
     if ! grep -q "^${WT_FLOW_DIR}/" "$gitignore" 2>/dev/null; then
-      info "Adding ${WT_FLOW_DIR}/ to .gitignore..."
       echo "${WT_FLOW_DIR}/" >> "$gitignore"
       gitignore_updated=true
     fi
     if ! grep -q "^\.worktrees/" "$gitignore" 2>/dev/null; then
-      info "Adding .worktrees/ to .gitignore..."
       echo ".worktrees/" >> "$gitignore"
       gitignore_updated=true
     fi
   else
-    info "Creating .gitignore..."
     echo "${WT_FLOW_DIR}/" > "$gitignore"
     echo ".worktrees/" >> "$gitignore"
     gitignore_updated=true
+  fi
+
+  if [[ "$gitignore_updated" == "true" ]]; then
+    success "Updated .gitignore"
   fi
 
   # Commit .gitignore if it was created or updated
@@ -97,7 +91,17 @@ cmd_init() {
     git commit -m "wt: Initialize workflow (add .gitignore entries)" > /dev/null 2>&1 || true
   fi
 
-  success "Worktree workflow initialized successfully!"
-  info "Working in worktree-staging branch"
-  info "You can now use 'wt create' to create worktrees"
+  # Create or checkout worktree-staging branch
+  if git show-ref --verify --quiet refs/heads/worktree-staging; then
+    # Branch exists, check it out
+    git checkout worktree-staging > /dev/null 2>&1
+    success "Checked out worktree-staging branch"
+  else
+    # Create new branch from current branch
+    git checkout -b worktree-staging > /dev/null 2>&1
+    success "Created worktree-staging branch"
+    success "Checked out worktree-staging branch"
+  fi
+
+  success "Worktree workflow initialized"
 }

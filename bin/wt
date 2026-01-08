@@ -30,12 +30,16 @@ Usage: wt <command> [options]
 Commands:
   init              Initialize worktree workflow in current repository
   status            Show uncommitted changes and worktree status
+  fetch             Fetch latest changes from origin
+  switch            Switch between worktree-staging and main
   create            Create a new worktree
   list              List all worktrees
   assign            Assign a file to a worktree
-  commit            Commit changes in a worktree
-  undo              Undo last commit in a worktree
   unassign          Unassign a file from a worktree
+  stage             Stage files in a worktree for selective commits
+  unstage           Unstage files in a worktree
+  commit            Commit changes in a worktree
+  uncommit          Uncommit last commit in a worktree
   apply             Apply worktree commits to staging
   unapply           Unapply worktree commits from staging
   push              Push a worktree branch to remote
