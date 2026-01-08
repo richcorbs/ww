@@ -7,7 +7,6 @@ A GitButler-inspired workflow using native git worktrees, allowing you to work o
 - **Dedicated staging branch**: All work happens in `worktree-staging`, keeping `main` clean
 - **File-level assignment**: Selectively assign files to different worktrees using two-letter abbreviations
 - **Directory assignment**: Assign all changed files in a directory or all files at once
-- **Automatic commits**: Files are committed to `worktree-staging` when assigned
 - **Selective staging**: Stage specific files in worktrees before committing
 - **Smart commits**: Automatically detects staged files and commits accordingly
 - **Commit tracking**: Track which commits have been applied between branches
@@ -70,7 +69,7 @@ wt status
 # Syntax: wt create <worktree-name> <branch> [optional-custom-path-to-worktree]
 wt create feature-auth feature/user-auth
 
-# 5. Assign files to the worktree (commits to worktree-staging automatically)
+# 5. Assign files to the worktree
 wt assign ab feature-auth                # Single file by abbreviation
 wt assign app/controllers feature-auth   # All changed files in directory
 # OR assign all files at once
@@ -98,9 +97,9 @@ Instead of working directly in `main`, all your work happens in a dedicated `wor
 
 1. **Initialize**: `wt init` creates and checks out `worktree-staging`
 2. **Work**: Make all changes in `worktree-staging` but you don't have to. You can still checkout and branch off of `main` if you need to.
-3. **Assign**: Files are committed to `worktree-staging` when assigned to worktrees
+3. **Assign**: `worktree-staging` stays in sync when files are assigned to worktrees
 4. **Worktrees**: `wt` automatically branches off of `worktree-staging` for you
-5. **Merge**: When features are done, merge to `main` via normal git/PR
+5. **Merge**: When features are done, merge to `main` via normal git PR workflow
 6. **Sync**: Use `wt sync` to merge `main` back into `worktree-staging` and cleanup your local branches and worktrees
 
 This keeps your `main` branch pristine while giving you a flexible staging area.
@@ -145,6 +144,8 @@ wt status
 
 Output:
 ```
+  Working in: worktree-staging
+
   Unassigned changes:
     ab  M  app/models/user.rb
     cd  A  app/controllers/sessions_controller.rb
