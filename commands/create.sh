@@ -5,7 +5,7 @@ show_help() {
   cat <<EOF
 Usage: wt create <branch>
 
-Create a new worktree with the given branch name, branching from worktree-staging.
+Create a new worktree with the given branch name, branching from wt-working.
 The worktree name will be the same as the branch name.
 
 Arguments:
@@ -62,26 +62,23 @@ cmd_create() {
   local repo_root
   repo_root=$(get_repo_root)
 
-  # Ensure we're on worktree-staging
+  # Ensure we're on wt-working
   local current_branch
   current_branch=$(git branch --show-current)
-  if [[ "$current_branch" != "worktree-staging" ]]; then
-    warn "Not on worktree-staging branch, checking it out..."
-    git checkout worktree-staging
+  if [[ "$current_branch" != "wt-working" ]]; then
+    warn "Not on wt-working branch, checking it out..."
+    git checkout wt-working
   fi
 
   # Path is always .worktrees/<branch> (slashes create subdirectories)
   local worktree_path=".worktrees/${branch}"
   local abs_path="${repo_root}/${worktree_path}"
 
-  # Create the worktree from worktree-staging
+  # Create the worktree from wt-working
   info "Creating worktree '${name}'..."
-  info "Branching from worktree-staging as '${branch}'..."
+  info "Branching from wt-working as '${branch}'..."
 
-  if git worktree add -b "$branch" "$abs_path" worktree-staging 2>&1; then
-    # Add to metadata
-    add_worktree_metadata "$name" "$branch" "$worktree_path"
-
+  if git worktree add -b "$branch" "$abs_path" wt-working 2>&1; then
     success "Worktree '${name}' created successfully!"
     info "Path: ${abs_path}"
     echo ""
