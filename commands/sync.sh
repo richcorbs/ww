@@ -77,7 +77,7 @@ cmd_sync() {
 
     # Update local source branch from origin
     info "Updating local ${source_branch} from origin/${source_branch}..."
-    git fetch origin "${source_branch}:${source_branch}" 2>&1 || warn "Failed to update local ${source_branch}"
+    git fetch origin "${source_branch}:${source_branch}" >/dev/null 2>&1 || warn "Failed to update local ${source_branch}"
   fi
 
   # Merge source branch into worktree-staging
