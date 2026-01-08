@@ -84,9 +84,9 @@ cmd_create() {
 
     success "Worktree '${name}' created successfully!"
     info "Path: ${abs_path}"
-    info ""
-    info "To assign files to this worktree, use:"
-    info "  wt assign ${name}"
+    echo ""
+    source "${WT_ROOT}/commands/status.sh"
+    cmd_status
   else
     error "Failed to create worktree"
   fi
