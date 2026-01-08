@@ -236,9 +236,9 @@ cmd_status() {
             pr_number=$(echo "$pr_data" | jq -r '.number')
             local pr_url
             pr_url=$(echo "$pr_data" | jq -r '.url')
-            pr_info=" ${GREEN}✓ Merged${NC} ${BLUE}PR #${pr_number}${NC}: ${pr_url}"
+            pr_info="${GREEN}✓ Merged${NC} ${BLUE}PR #${pr_number}${NC}: ${pr_url}"
           else
-            pr_info=" ${GREEN}✓ Merged into ${main_branch}${NC}"
+            pr_info="${GREEN}✓ Merged into ${main_branch}${NC}"
           fi
         else
           # Query for open PR associated with this branch
@@ -249,12 +249,12 @@ cmd_status() {
             # Get PR number from URL
             local pr_number
             pr_number=$(echo "$pr_url" | grep -oE '[0-9]+$')
-            pr_info=" ${BLUE}PR #${pr_number}${NC}: ${pr_url}"
+            pr_info="${BLUE}PR #${pr_number}${NC}: ${pr_url}"
           fi
         fi
       elif [[ "$is_merged" == "true" ]]; then
         # No gh CLI, just show merged status
-        pr_info=" ${GREEN}✓ Merged into ${main_branch}${NC}"
+        pr_info="${GREEN}✓ Merged into ${main_branch}${NC}"
       fi
 
       echo -e "    ${GREEN}${name}${NC} (${branch})${status_str}"
