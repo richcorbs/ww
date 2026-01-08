@@ -73,7 +73,7 @@ cmd_push() {
   if pushd "$abs_worktree_path" > /dev/null 2>&1; then
     # Check if upstream is set
     local upstream
-    upstream=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "")
+    upstream=$(get_upstream_branch)
 
     if [[ -z "$upstream" ]]; then
       # Set upstream and push
