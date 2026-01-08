@@ -73,6 +73,11 @@ cmd_unassign() {
     error "Worktree '$worktree_name' not found"
   fi
 
+  # Check for unassigned changes in worktree-staging
+  if ! git diff-index --quiet HEAD --; then
+    error "Cannot unassign: worktree-staging has unassigned changes. Assign them first."
+  fi
+
   # Check if unassigning all files
   if [[ "$file_or_abbrev" == "." ]]; then
     info "Unassigning all files from '${worktree_name}'..."
