@@ -30,18 +30,27 @@ A GitButler-inspired workflow using native git worktrees, allowing you to work o
 ### Install
 
 ```bash
+curl -fsSL https://raw.githubusercontent.com/richcorbs/ww/main/install.sh | bash
+```
+
+The installer will check dependencies, download ww to `~/.local/share/ww`, and create a symlink in `~/.local/bin`.
+
+### Install for Development
+
+```bash
 # Clone the repository
-git clone https://github.com/richcorbs/ww.git .
+git clone https://github.com/richcorbs/ww.git
 cd ww
 
-# Run the installer
+# Run the installer (symlinks to your clone)
 ./install.sh
 ```
 
-The installer will:
-1. Check dependencies
-2. Create a symlink to `ww` in your PATH
-3. Verify the installation
+### Uninstall
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/richcorbs/ww/main/uninstall.sh | bash
+```
 
 ## Quick Start
 
