@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Switch between wt-working and main
+# Switch between ww-working and main
 
 show_help() {
   cat <<EOF
-Usage: wt switch [branch]
+Usage: ww switch [branch]
 
 Switch between branches. If no branch is specified:
-  - If on wt-working: switch to main
-  - If on any other branch: switch to wt-working
+  - If on ww-working: switch to main
+  - If on any other branch: switch to ww-working
 
 Arguments:
   branch    Optional branch name to switch to
@@ -16,8 +16,8 @@ Options:
   -h, --help    Show this help message
 
 Examples:
-  wt switch              # Toggle between wt-working and main
-  wt switch develop      # Switch to develop branch
+  ww switch              # Toggle between ww-working and main
+  ww switch develop      # Switch to develop branch
 EOF
 }
 
@@ -49,9 +49,9 @@ cmd_switch() {
   local current_branch
   current_branch=$(git branch --show-current)
 
-  # If no target specified, toggle between wt-working and main
+  # If no target specified, toggle between ww-working and main
   if [[ -z "$target_branch" ]]; then
-    if [[ "$current_branch" == "wt-working" ]]; then
+    if [[ "$current_branch" == "ww-working" ]]; then
       # Determine main branch name
       local main_branch="main"
       if git show-ref --verify --quiet refs/heads/master; then
@@ -59,7 +59,7 @@ cmd_switch() {
       fi
       target_branch="$main_branch"
     else
-      target_branch="wt-working"
+      target_branch="ww-working"
     fi
   fi
 
