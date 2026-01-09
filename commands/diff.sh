@@ -169,7 +169,7 @@ TOGGLESCRIPT
   chmod +x "$toggle_script"
 
   # Build preview command - show diff against main, or file contents for new files
-  local preview_cmd="cd '$abs_worktree_path' && _file=\$(echo {} | sed 's/^..  //' | sed 's/ \\[S\\]\$//' | sed 's/ \\[C\\]\$//'); _st=\$(git status --porcelain \"\$_file\" 2>/dev/null); if [[ \"\$_st\" == \\?\\?* ]] || [[ \"\$_st\" == A\\ * ]]; then echo '=== NEW FILE ==='; cat \"\$_file\" 2>/dev/null; else git diff HEAD -- \"\$_file\" 2>/dev/null || git diff '${main_branch}' -- \"\$_file\" 2>/dev/null || cat \"\$_file\" 2>/dev/null; fi"
+  local preview_cmd="cd '$abs_worktree_path' && _file=\$(echo {} | sed 's/^..  //' | sed 's/ \\[S\\]\$//' | sed 's/ \\[C\\]\$//'); _st=\$(git status --porcelain \"\$_file\" 2>/dev/null); if [[ \"\$_st\" == \\?\\?* ]] || [[ \"\$_st\" == A\\ * ]]; then echo '=== NEW FILE ==='; cat \"\$_file\" 2>/dev/null; else git diff --color=always HEAD -- \"\$_file\" 2>/dev/null || git diff --color=always '${main_branch}' -- \"\$_file\" 2>/dev/null || cat \"\$_file\" 2>/dev/null; fi"
 
   info "Reviewing diffs in '${worktree_name}' (s=toggle stage, enter/esc=exit)"
   echo ""
