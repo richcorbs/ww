@@ -3,7 +3,7 @@
 
 show_help() {
   cat <<EOF
-Usage: wt list
+Usage: ww list
 
 List all worktrees with their branch information and status.
 
@@ -40,7 +40,7 @@ cmd_list() {
 
   if [[ -z "$names" ]]; then
     info "No worktrees created yet"
-    info "Use 'wt create <name> <branch>' to create one"
+    info "Use 'ww create <name> <branch>' to create one"
     exit 0
   fi
 
