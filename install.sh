@@ -50,7 +50,35 @@ if ! printf '%s\n%s\n' "$MIN_GIT_VERSION" "$GIT_VERSION" | sort -V -C; then
   error "git version $MIN_GIT_VERSION or higher is required (found $GIT_VERSION)"
 fi
 
-success "All dependencies satisfied"
+success "All required dependencies satisfied"
+
+# Check for optional dependencies
+if ! command -v fzf &> /dev/null; then
+  warn "fzf is not installed (optional but highly recommended)"
+  info "fzf enables interactive file and worktree selection"
+  info ""
+  info "Install fzf with:"
+  info "  macOS:   brew install fzf"
+  info "  Ubuntu:  sudo apt install fzf"
+  info "  Fedora:  sudo dnf install fzf"
+  info "  Manual:  https://github.com/junegunn/fzf#installation"
+  echo ""
+else
+  success "fzf is installed"
+fi
+
+if ! command -v gh &> /dev/null; then
+  warn "gh (GitHub CLI) is not installed (optional)"
+  info "gh enables PR links in status and 'wt pr' command"
+  info ""
+  info "Install gh with:"
+  info "  macOS:   brew install gh"
+  info "  Ubuntu:  See https://github.com/cli/cli/blob/trunk/docs/install_linux.md"
+  info "  Manual:  https://github.com/cli/cli#installation"
+  echo ""
+else
+  success "gh (GitHub CLI) is installed"
+fi
 
 # Determine installation directory
 info ""
