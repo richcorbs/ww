@@ -88,16 +88,21 @@ ww assign feature/user-auth
 # ww assign feature/user-auth app/controllers/        # Directory
 # ww assign feature/user-auth .                       # All files
 
-# 6. Commit changes in the worktree
+# 6. Review and stage changes (optional)
+ww diff feature/user-auth
+# Navigate files with arrow keys, see diff preview
+# Press 's' to toggle stage/unstage, enter/esc to exit
+
+# 7. Commit changes in the worktree
 ww commit feature/user-auth "Add user authentication"
 
-# 7. Push the feature branch
+# 8. Push the feature branch
 ww push feature/user-auth
 
-# 8. Create pull request
+# 9. Create pull request
 ww pr feature/user-auth  # Opens GitHub PR creation page in browser
 
-# 9. After PR is merged to main, update ww-working
+# 10. After PR is merged to main, update ww-working
 ww update
 # This merges main into ww-working and automatically cleans up merged worktrees
 ```
@@ -233,41 +238,36 @@ What happens:
 2. Changes are copied to the worktree (uncommitted)
 3. Files are removed from "unassigned" list
 
-### `ww stage <worktree> <file|directory|.>`
+### `ww diff [worktree]`
 
-Stage files in a worktree for selective commits.
-
-```bash
-ww stage feature/user-auth app/models/user.rb    # Single file
-ww stage feature/user-auth app/models/           # Directory
-ww stage feature/user-auth .                     # All files
-```
-
-Use this when you want to commit only specific files from a worktree.
-
-### `ww unstage <worktree> <file|.>`
-
-Unstage files in a worktree (equivalent to git reset). Removes files from the staging area but keeps the changes as uncommitted.
+Review diffs in a worktree with interactive preview and stage/unstage toggle.
 
 ```bash
-ww unstage feature/user-auth app/models/user.rb    # Single file
-ww unstage feature/user-auth .                     # All files
+ww diff                    # Select worktree, then review diffs
+ww diff feature/user-auth  # Review diffs in specific worktree
 ```
 
-This is the opposite of `ww stage` - useful when you've staged files but want to unstage them without losing changes.
+Features:
+- Navigate files with arrow keys
+- See diff preview on the right (or file contents for new files)
+- Press `s` to toggle stage/unstage
+- Press `enter` or `esc` to exit
+- Header shows file count and staged count
 
-### `ww commit <worktree> <message>`
+### `ww commit <worktree> [message]`
 
-Commit changes in a worktree without having to cd into it.
+Commit changes in a worktree with interactive file selection.
 
 ```bash
-ww commit feature/user-auth "Add user authentication"
+ww commit feature/user-auth                           # Select files, then enter message
+ww commit feature/user-auth "Add user authentication" # Select files, message pre-filled
 ```
 
-The commit command is staging-aware:
-- If files are staged (via `ww stage`), commits only those files
-- If no files are staged, auto-stages all changes and commits them
-- Shows clear messaging about what's being committed
+Features:
+- Always opens fzf to select files to commit
+- Staged files shown with `[S]` indicator
+- Message argument pre-fills the commit message prompt
+- Use `ww diff` beforehand to stage specific files
 
 ### `ww uncommit <worktree>`
 
