@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Unapply worktree commits from wt-working
+# Unapply worktree commits from ww-working
 
 show_help() {
   cat <<EOF
-Usage: wt unapply <worktree>
+Usage: ww unapply <worktree>
 
-Revert assignment commits in wt-working that were made for a worktree.
+Revert assignment commits in ww-working that were made for a worktree.
 Uses 'git revert' to preserve history safely.
 
 Arguments:
@@ -15,7 +15,7 @@ Options:
   -h, --help    Show this help message
 
 Example:
-  wt unapply feature-auth
+  ww unapply feature-auth
 EOF
 }
 
@@ -59,7 +59,7 @@ cmd_unapply() {
     error "Worktree '$worktree_name' not found"
   fi
 
-  # Find assignment commits for this worktree in wt-working
+  # Find assignment commits for this worktree in ww-working
   info "Finding assignment commits for '${worktree_name}'..."
 
   local assignment_commits=()
@@ -67,7 +67,7 @@ cmd_unapply() {
     if [[ -n "$sha" ]]; then
       assignment_commits+=("$sha")
     fi
-  done < <(git log --format="%H" --grep="wt: assign .* to ${worktree_name}$" wt-working --max-count=100 2>/dev/null)
+  done < <(git log --format="%H" --grep="ww: assign .* to ${worktree_name}$" ww-working --max-count=100 2>/dev/null)
 
   if [[ ${#assignment_commits[@]} -eq 0 ]]; then
     info "No assignment commits found for '${worktree_name}'"
@@ -76,11 +76,11 @@ cmd_unapply() {
 
   info "Found ${#assignment_commits[@]} assignment commit(s) to revert"
 
-  # Ensure on wt-working branch
+  # Ensure on ww-working branch
   local current_branch
   current_branch=$(git branch --show-current)
-  if [[ "$current_branch" != "wt-working" ]]; then
-    error "Must be on wt-working branch to unapply. Current branch: ${current_branch}"
+  if [[ "$current_branch" != "ww-working" ]]; then
+    error "Must be on ww-working branch to unapply. Current branch: ${current_branch}"
   fi
 
   # Revert each commit (in reverse order, newest first)
@@ -100,6 +100,6 @@ cmd_unapply() {
 
   success "Unapplied ${reverted} commit(s) from '${worktree_name}'"
   echo ""
-  source "${WT_ROOT}/commands/status.sh"
+  source "${WW_ROOT}/commands/status.sh"
   cmd_status
 }
