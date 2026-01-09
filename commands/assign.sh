@@ -3,9 +3,9 @@
 
 show_help() {
   cat <<EOF
-Usage: wt assign <worktree> [file|directory|.]
+Usage: ww assign <worktree> [file|directory|.]
 
-Assign uncommitted changes to a worktree and commit them to wt-working.
+Assign uncommitted changes to a worktree and commit them to ww-working.
 
 Arguments:
   worktree            Name of the worktree
@@ -16,10 +16,10 @@ Options:
   -h, --help    Show this help message
 
 Examples:
-  wt assign feature-auth                      # Interactive fzf selection
-  wt assign feature-auth app/models/user.rb   # Single file by path
-  wt assign feature-auth app/models/          # All changed files in directory
-  wt assign feature-auth .                    # All uncommitted files
+  ww assign feature-auth                      # Interactive fzf selection
+  ww assign feature-auth app/models/user.rb   # Single file by path
+  ww assign feature-auth app/models/          # All changed files in directory
+  ww assign feature-auth .                    # All uncommitted files
 EOF
 }
 
@@ -66,19 +66,19 @@ cmd_assign() {
     local repo_root
     repo_root=$(get_repo_root)
 
-    # Ensure we're on wt-working
+    # Ensure we're on ww-working
     local current_branch
     current_branch=$(git branch --show-current)
-    if [[ "$current_branch" != "${WT_BRANCH}" ]]; then
-      git checkout ${WT_BRANCH} > /dev/null 2>&1
+    if [[ "$current_branch" != "${WW_BRANCH}" ]]; then
+      git checkout ${WW_BRANCH} > /dev/null 2>&1
     fi
 
     # Path is always .worktrees/<branch>
     local worktree_path=".worktrees/${worktree_name}"
     local abs_path="${repo_root}/${worktree_path}"
 
-    # Create the worktree from wt-working
-    if git worktree add -b "$worktree_name" "$abs_path" ${WT_BRANCH} 2>&1; then
+    # Create the worktree from ww-working
+    if git worktree add -b "$worktree_name" "$abs_path" ${WW_BRANCH} 2>&1; then
       success "Created worktree '$worktree_name'"
       echo ""
     else
@@ -240,7 +240,7 @@ cmd_assign() {
       git add -u "$filepath" 2>/dev/null || git rm "$filepath" 2>/dev/null || true
     fi
 
-    # Commit the file to wt-working
+    # Commit the file to ww-working
     if git commit -m "$(assignment_commit_message "$filepath" "$worktree_name")"; then
       local commit_sha
       commit_sha=$(git rev-parse HEAD)
@@ -284,17 +284,17 @@ cmd_assign() {
   done
 
   if [[ $assigned_count -eq ${#files_to_assign[@]} ]]; then
-    success "Assigned ${assigned_count} file(s) to '${worktree_name}' and committed to wt-working"
+    success "Assigned ${assigned_count} file(s) to '${worktree_name}' and committed to ww-working"
     echo ""
     # Show updated status
-    source "${WT_ROOT}/commands/status.sh"
+    source "${WW_ROOT}/commands/status.sh"
     cmd_status
     exit 0
   elif [[ $assigned_count -gt 0 ]]; then
     warn "Assigned ${assigned_count} of ${#files_to_assign[@]} file(s) to '${worktree_name}'"
     echo ""
     # Show updated status
-    source "${WT_ROOT}/commands/status.sh"
+    source "${WW_ROOT}/commands/status.sh"
     cmd_status
     exit 0
   else

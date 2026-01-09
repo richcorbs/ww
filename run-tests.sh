@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Test runner for wt
+# Test runner for ww
 
 set -e
 
@@ -16,7 +16,7 @@ if [[ ${#MISSING_DEPS[@]} -gt 0 ]]; then
   exit 1
 fi
 
-echo "Running wt test suite..."
+echo "Running ww test suite..."
 echo ""
 
 "${SCRIPT_DIR}/tests/test-all.sh"

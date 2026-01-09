@@ -3,7 +3,7 @@
 
 show_help() {
   cat <<EOF
-Usage: wt uncommit <worktree>
+Usage: ww uncommit <worktree>
 
 Uncommit the last commit in a worktree by resetting by one commit.
 Brings the changes back to uncommitted state in that worktree.
@@ -15,7 +15,7 @@ Options:
   -h, --help    Show this help message
 
 Example:
-  wt uncommit feature-auth
+  ww uncommit feature-auth
 EOF
 }
 
@@ -104,7 +104,7 @@ cmd_uncommit() {
       success "Uncommitted last commit in '${worktree_name}': ${last_commit_sha}"
       info "Changes are now uncommitted in the worktree"
       echo ""
-      source "${WT_ROOT}/commands/status.sh"
+      source "${WW_ROOT}/commands/status.sh"
       cmd_status
     else
       popd > /dev/null 2>&1

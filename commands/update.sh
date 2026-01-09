@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Update wt-working with main
+# Update ww-working with main
 
 show_help() {
   cat <<EOF
-Usage: wt update [branch]
+Usage: ww update [branch]
 
-Update wt-working with changes from another branch (default: main).
-Merges the specified branch into wt-working to keep it up-to-date.
+Update ww-working with changes from another branch (default: main).
+Merges the specified branch into ww-working to keep it up-to-date.
 Automatically detects and cleans up worktrees whose branches have been merged.
 
 Arguments:
@@ -18,14 +18,14 @@ Options:
 What it does:
   1. Fetches latest changes from origin
   2. Updates local branch from origin
-  3. Merges branch into wt-working
+  3. Merges branch into ww-working
   4. Detects worktrees with merged branches
   5. Removes merged worktrees automatically
   6. Deletes corresponding remote branches
 
 Examples:
-  wt update           # Update from main and clean up merged worktrees
-  wt update develop   # Update from develop branch
+  ww update           # Update from main and clean up merged worktrees
+  ww update develop   # Update from develop branch
 EOF
 }
 
@@ -50,12 +50,12 @@ cmd_update() {
   ensure_git_repo
   ensure_initialized
 
-  # Ensure on wt-working
+  # Ensure on ww-working
   local current_branch
   current_branch=$(git branch --show-current)
-  if [[ "$current_branch" != "wt-working" ]]; then
-    warn "Not on wt-working branch, checking it out..."
-    git checkout wt-working
+  if [[ "$current_branch" != "ww-working" ]]; then
+    warn "Not on ww-working branch, checking it out..."
+    git checkout ww-working
   fi
 
   # Check if source branch exists
@@ -63,7 +63,7 @@ cmd_update() {
     error "Branch '${source_branch}' does not exist"
   fi
 
-  info "Updating wt-working with '${source_branch}'..."
+  info "Updating ww-working with '${source_branch}'..."
 
   # Fetch latest changes
   if git remote get-url origin > /dev/null 2>&1; then
@@ -75,9 +75,9 @@ cmd_update() {
     git fetch origin "${source_branch}:${source_branch}" >/dev/null 2>&1 || warn "Failed to update local ${source_branch}"
   fi
 
-  # Merge source branch into wt-working
+  # Merge source branch into ww-working
   if git merge --no-edit "${source_branch}" >/dev/null 2>&1; then
-    success "Successfully updated wt-working with '${source_branch}'"
+    success "Successfully updated ww-working with '${source_branch}'"
 
     # Show summary
     local merge_commit
@@ -116,16 +116,16 @@ cmd_update() {
           uncommitted_count=$(get_worktree_uncommitted_count "$abs_path")
 
           if [[ "$uncommitted_count" -gt 0 ]]; then
-            # Has uncommitted changes - recreate branch from updated wt-working
+            # Has uncommitted changes - recreate branch from updated ww-working
             info "  Worktree '${name}' has ${uncommitted_count} uncommitted change(s)"
-            info "  Recreating branch '${branch}' from updated wt-working..."
+            info "  Recreating branch '${branch}' from updated ww-working..."
 
             # Delete old branch
             git branch -D "${branch}" >/dev/null 2>&1
 
-            # Create new branch from wt-working in the worktree
+            # Create new branch from ww-working in the worktree
             if pushd "$abs_path" > /dev/null 2>&1; then
-              git checkout -b "${branch}" wt-working >/dev/null 2>&1
+              git checkout -b "${branch}" ww-working >/dev/null 2>&1
               popd > /dev/null 2>&1
             fi
 
@@ -170,7 +170,7 @@ cmd_update() {
       info "No merged worktrees to clean up"
     fi
     echo ""
-    source "${WT_ROOT}/commands/status.sh"
+    source "${WW_ROOT}/commands/status.sh"
     cmd_status
     exit 0
   else

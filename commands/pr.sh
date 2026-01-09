@@ -3,7 +3,7 @@
 
 show_help() {
   cat <<EOF
-Usage: wt pr [worktree]
+Usage: ww pr [worktree]
 
 Open the GitHub PR creation page for a worktree's branch in your browser.
 The worktree branch must be pushed to origin first.
@@ -16,8 +16,8 @@ Options:
   -h, --help    Show this help message
 
 Examples:
-  wt pr                # Select worktree interactively
-  wt pr feature-auth   # Open PR for specific worktree
+  ww pr                # Select worktree interactively
+  ww pr feature-auth   # Open PR for specific worktree
 EOF
 }
 
@@ -153,6 +153,6 @@ cmd_pr() {
 
   success "PR page opened for '${worktree_name}'"
   echo ""
-  source "${WT_ROOT}/commands/status.sh"
+  source "${WW_ROOT}/commands/status.sh"
   cmd_status
 }

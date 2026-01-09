@@ -11,20 +11,20 @@ readonly BLUE='\033[0;34m'
 readonly NC='\033[0m' # No Color
 
 # Constants
-readonly WT_BRANCH="wt-working"
+readonly WW_BRANCH="ww-working"
 readonly FZF_OPTS="--multi --height=40% --border --bind=ctrl-j:down,ctrl-k:up,ctrl-d:half-page-down,ctrl-u:half-page-up"
 
 # Generate assignment commit message
 # Usage: assignment_commit_message "filepath" "worktree_name"
 assignment_commit_message() {
-  echo "wt: assign $1 to $2"
+  echo "ww: assign $1 to $2"
 }
 
 # Parse assignment commit to extract worktree name
-# Usage: worktree_name=$(parse_assignment_commit "wt: assign file.txt to my-worktree")
+# Usage: worktree_name=$(parse_assignment_commit "ww: assign file.txt to my-worktree")
 parse_assignment_worktree() {
   local commit_msg="$1"
-  echo "$commit_msg" | sed -n 's/^wt: assign .* to \(.*\)$/\1/p'
+  echo "$commit_msg" | sed -n 's/^ww: assign .* to \(.*\)$/\1/p'
 }
 
 # Error handling
@@ -56,14 +56,14 @@ get_repo_root() {
   git rev-parse --show-toplevel
 }
 
-# Check if wt is initialized (wt-working branch exists)
+# Check if ww is initialized (ww-working branch exists)
 is_initialized() {
-  git show-ref --verify --quiet "refs/heads/${WT_BRANCH}"
+  git show-ref --verify --quiet "refs/heads/${WW_BRANCH}"
 }
 
 ensure_initialized() {
   if ! is_initialized; then
-    error "Worktree workflow not initialized. Run 'wt init' first."
+    error "Worktree workflow not initialized. Run 'ww init' first."
   fi
 }
 
@@ -305,8 +305,8 @@ get_worktree_uncommitted_count() {
   echo "$count"
 }
 
-# Get count of commits in a worktree that are not in wt-working
-# This tells you how many commits the worktree has made that haven't been applied to wt-working
+# Get count of commits in a worktree that are not in ww-working
+# This tells you how many commits the worktree has made that haven't been applied to ww-working
 # Input: $1 = absolute path to worktree directory
 # Output: count of commits (integer)
 # Example:
@@ -318,9 +318,9 @@ get_worktree_commit_count() {
 
   if [[ -d "$worktree_path" ]]; then
     if pushd "$worktree_path" > /dev/null 2>&1; then
-      # git rev-list WT_BRANCH..HEAD lists commits in HEAD not in WT_BRANCH
+      # git rev-list WW_BRANCH..HEAD lists commits in HEAD not in WW_BRANCH
       # --count just gives us the number
-      count=$(git rev-list --count "${WT_BRANCH}..HEAD" 2>/dev/null || echo "0")
+      count=$(git rev-list --count "${WW_BRANCH}..HEAD" 2>/dev/null || echo "0")
       popd > /dev/null 2>&1
     fi
   fi
@@ -450,7 +450,7 @@ get_worktree_status_summary() {
   # Check for assignment commits
   local applied_status=""
   local assignment_commits
-  assignment_commits=$(git log ${WT_BRANCH} --oneline --grep="wt: assign .* to ${name}" --max-count=50 2>/dev/null || echo "")
+  assignment_commits=$(git log ${WW_BRANCH} --oneline --grep="ww: assign .* to ${name}" --max-count=50 2>/dev/null || echo "")
 
   if [[ -n "$assignment_commits" ]]; then
     applied_status=" [applied]"
@@ -520,7 +520,7 @@ select_worktree_interactive() {
   names=$(list_worktree_names)
 
   if [[ -z "$names" ]]; then
-    error "No worktrees available. Create one with 'wt create <name>'"
+    error "No worktrees available. Create one with 'ww create <name>'"
   fi
 
   # Build worktree list with status
@@ -555,16 +555,16 @@ select_assigned_file_interactive() {
       local msg
       msg=$(git log -1 --format="%s" "$sha" 2>/dev/null)
 
-      # Extract filename from "wt: assign <filename> to <worktree>" format
+      # Extract filename from "ww: assign <filename> to <worktree>" format
       # Using sed to extract the part between "assign " and " to"
       local filename
-      filename=$(echo "$msg" | sed -n 's/^wt: assign \(.*\) to .*$/\1/p')
+      filename=$(echo "$msg" | sed -n 's/^ww: assign \(.*\) to .*$/\1/p')
 
       if [[ -n "$filename" ]]; then
         assigned_files+="${filename}"$'\n'
       fi
     fi
-  done < <(git log --format="%H" --grep="wt: assign .* to ${worktree_name}$" ${WT_BRANCH} --max-count=100 2>/dev/null)
+  done < <(git log --format="%H" --grep="ww: assign .* to ${worktree_name}$" ${WW_BRANCH} --max-count=100 2>/dev/null)
 
   if [[ -z "$assigned_files" ]]; then
     error "No files assigned to '${worktree_name}'"

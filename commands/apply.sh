@@ -3,7 +3,7 @@
 
 show_help() {
   cat <<EOF
-Usage: wt apply <worktree>
+Usage: ww apply <worktree>
 
 Apply (cherry-pick) all commits from a worktree that haven't been
 applied to staging yet. This makes those changes unavailable for
@@ -16,7 +16,7 @@ Options:
   -h, --help    Show this help message
 
 Example:
-  wt apply feature-auth
+  ww apply feature-auth
 EOF
 }
 
@@ -112,6 +112,6 @@ cmd_apply() {
 
   success "Applied ${#applied_commits[@]} commit(s) from '${worktree_name}' to staging"
   echo ""
-  source "${WT_ROOT}/commands/status.sh"
+  source "${WW_ROOT}/commands/status.sh"
   cmd_status
 }

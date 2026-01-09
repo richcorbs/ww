@@ -3,9 +3,9 @@
 
 show_help() {
   cat <<EOF
-Usage: wt create <branch>
+Usage: ww create <branch>
 
-Create a new worktree with the given branch name, branching from wt-working.
+Create a new worktree with the given branch name, branching from ww-working.
 The worktree name will be the same as the branch name.
 
 Arguments:
@@ -15,9 +15,9 @@ Options:
   -h, --help    Show this help message
 
 Examples:
-  wt create feature/user-auth       # Creates .worktrees/feature/user-auth/
-  wt create bugfix/issue-123        # Creates .worktrees/bugfix/issue-123/
-  wt create feat-login              # Creates .worktrees/feat-login/
+  ww create feature/user-auth       # Creates .worktrees/feature/user-auth/
+  ww create bugfix/issue-123        # Creates .worktrees/bugfix/issue-123/
+  ww create feat-login              # Creates .worktrees/feat-login/
 EOF
 }
 
@@ -62,27 +62,27 @@ cmd_create() {
   local repo_root
   repo_root=$(get_repo_root)
 
-  # Ensure we're on wt-working
+  # Ensure we're on ww-working
   local current_branch
   current_branch=$(git branch --show-current)
-  if [[ "$current_branch" != "wt-working" ]]; then
-    warn "Not on wt-working branch, checking it out..."
-    git checkout wt-working
+  if [[ "$current_branch" != "ww-working" ]]; then
+    warn "Not on ww-working branch, checking it out..."
+    git checkout ww-working
   fi
 
   # Path is always .worktrees/<branch> (slashes create subdirectories)
   local worktree_path=".worktrees/${branch}"
   local abs_path="${repo_root}/${worktree_path}"
 
-  # Create the worktree from wt-working
+  # Create the worktree from ww-working
   info "Creating worktree '${name}'..."
-  info "Branching from wt-working as '${branch}'..."
+  info "Branching from ww-working as '${branch}'..."
 
-  if git worktree add -b "$branch" "$abs_path" wt-working 2>&1; then
+  if git worktree add -b "$branch" "$abs_path" ww-working 2>&1; then
     success "Worktree '${name}' created successfully!"
     info "Path: ${abs_path}"
     echo ""
-    source "${WT_ROOT}/commands/status.sh"
+    source "${WW_ROOT}/commands/status.sh"
     cmd_status
   else
     error "Failed to create worktree"
