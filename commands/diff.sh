@@ -101,18 +101,18 @@ main_branch="$2"
   # Uncommitted changes
   git status --porcelain 2>/dev/null | while IFS= read -r line; do
     [[ -z "$line" ]] && continue
-    local status_code="${line:0:2}"
-    local filepath="${line:3}"
+    status_code="${line:0:2}"
+    filepath="${line:3}"
 
-    local X="${status_code:0:1}"
-    local Y="${status_code:1:1}"
-    local display_status="${Y}${X}"
+    X="${status_code:0:1}"
+    Y="${status_code:1:1}"
+    display_status="${Y}${X}"
 
     if [[ "$display_status" == "  " ]]; then
       display_status=" "
     fi
 
-    local staged_indicator=""
+    staged_indicator=""
     if [[ "$X" != " " ]] && [[ "$X" != "?" ]]; then
       staged_indicator=" [S]"
     fi
@@ -128,7 +128,7 @@ main_branch="$2"
       echo " C  ${filepath}"
     fi
   done
-} | sort -t'/' -k1 | uniq
+}
 LISTSCRIPT
   chmod +x "$list_script"
 
@@ -157,8 +157,8 @@ fi
 TOGGLESCRIPT
   chmod +x "$toggle_script"
 
-  # Build preview command - show diff against main
-  local preview_cmd="cd '$abs_worktree_path' && file=\$(echo {} | sed 's/^..  //' | sed 's/ \\[S\\]\$//' | sed 's/ \\[C\\]\$//'); git diff HEAD -- \"\$file\" 2>/dev/null || git diff '${main_branch}' -- \"\$file\" 2>/dev/null || cat \"\$file\" 2>/dev/null"
+  # Build preview command - show diff against main, or file contents for new files
+  local preview_cmd="cd '$abs_worktree_path' && file=\$(echo {} | sed 's/^..  //' | sed 's/ \\[S\\]\$//' | sed 's/ \\[C\\]\$//'); status=\$(git status --porcelain \"\$file\" 2>/dev/null); if [[ \"\$status\" == \\?\\?* ]] || [[ \"\$status\" == A\\ * ]]; then echo '=== NEW FILE ==='; cat \"\$file\" 2>/dev/null; else git diff HEAD -- \"\$file\" 2>/dev/null || git diff '${main_branch}' -- \"\$file\" 2>/dev/null || cat \"\$file\" 2>/dev/null; fi"
 
   info "Reviewing diffs in '${worktree_name}' (s=toggle stage, enter/esc=exit)"
   echo ""
