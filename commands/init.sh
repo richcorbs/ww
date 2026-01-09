@@ -3,12 +3,12 @@
 
 show_help() {
   cat <<EOF
-Usage: wt init
+Usage: ww init
 
 Initialize the worktree workflow in the current git repository.
 
 This will:
-  - Create wt-working branch from main
+  - Create ww-working branch from main
   - Create .worktrees/ directory for feature worktrees
   - Add .worktrees/ to .gitignore
 
@@ -65,7 +65,7 @@ cmd_init() {
   if [[ "$gitignore_updated" == "true" ]]; then
     success "Updated .gitignore"
     git add .gitignore
-    git commit -m "wt: Initialize workflow (add .worktrees/ to .gitignore)" > /dev/null 2>&1 || true
+    git commit -m "ww: Initialize workflow (add .worktrees/ to .gitignore)" > /dev/null 2>&1 || true
   fi
 
   # Ensure main branch exists
@@ -73,16 +73,16 @@ cmd_init() {
     error "Main branch does not exist. Please create it first or ensure you have a main branch."
   fi
 
-  # Create or checkout wt-working branch
-  if git show-ref --verify --quiet refs/heads/wt-working; then
+  # Create or checkout ww-working branch
+  if git show-ref --verify --quiet refs/heads/ww-working; then
     # Branch exists, check it out
-    git checkout wt-working > /dev/null 2>&1
-    success "Checked out wt-working branch"
+    git checkout ww-working > /dev/null 2>&1
+    success "Checked out ww-working branch"
   else
     # Create new branch from main
-    git checkout -b wt-working main > /dev/null 2>&1
-    success "Created wt-working branch from main"
-    success "Checked out wt-working branch"
+    git checkout -b ww-working main > /dev/null 2>&1
+    success "Created ww-working branch from main"
+    success "Checked out ww-working branch"
   fi
 
   success "Worktree workflow initialized"
