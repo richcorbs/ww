@@ -251,9 +251,9 @@ cmd_status() {
         status_str=" - ${YELLOW}EMPTY${NC}"
       fi
 
-      # Check if branch has been merged into main
+      # Check if branch has been merged into main (only if it has commits)
       local is_merged=false
-      if [[ -n "$check_branch" ]] && is_branch_merged "$branch" "$check_branch"; then
+      if [[ "$commit_count" -gt 0 ]] && [[ -n "$check_branch" ]] && is_branch_merged "$branch" "$check_branch"; then
         is_merged=true
       fi
 
