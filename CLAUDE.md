@@ -2,27 +2,27 @@
 
 ## Project Philosophy
 
-**Core Concept**: `wt` implements a "work in staging, organize later" workflow. Developers work on a shared `wt-working` branch and use `wt assign` to organize changes into separate worktrees when ready to create PRs.
+**Core Concept**: `ww` implements a "work in staging, organize later" workflow. Developers work on a shared `ww-working` branch and use `ww assign` to organize changes into separate worktrees when ready to create PRs.
 
 **Key Principle**: Minimize friction - make it easy to "just start coding" and organize later.
 
 ## Major Simplifications (Important History)
 
 1. **Removed abbreviation system** (Jan 2026) - Originally had hash-based two-letter abbreviations (aa-zz) for files. Tried sequential abbreviations but they shifted after assignment. Replaced entirely with fzf interactive selection.
-2. **Simplified worktree creation** - Changed from `wt create <name> <branch> [path]` to just `wt create <branch>`. Branch name IS the worktree name.
-3. **Auto-create worktrees** - Commands like `wt assign` now create worktrees automatically if they don't exist.
+2. **Simplified worktree creation** - Changed from `ww create <name> <branch> [path]` to just `ww create <branch>`. Branch name IS the worktree name.
+3. **Auto-create worktrees** - Commands like `ww assign` now create worktrees automatically if they don't exist.
 
 ## Critical Architecture Decisions
 
 ### Worktree Naming
 - Branch name = worktree name (always)
 - Path is always `.worktrees/<branch>` (slashes in branch names create subdirectories)
-- Example: `wt create feature/auth` creates `.worktrees/feature/auth/`
+- Example: `ww create feature/auth` creates `.worktrees/feature/auth/`
 
 ### Command Argument Order
-- `wt assign <worktree> [file]` (worktree FIRST, file second or omit for fzf)
-- `wt commit <worktree> [message]` (worktree FIRST, always uses fzf, message pre-fills prompt)
-- `wt unassign <worktree> [file]` (worktree FIRST, file optional - defaults to all if omitted)
+- `ww assign <worktree> [file]` (worktree FIRST, file second or omit for fzf)
+- `ww commit <worktree> [message]` (worktree FIRST, always uses fzf, message pre-fills prompt)
+- `ww unassign <worktree> [file]` (worktree FIRST, file optional - defaults to all if omitted)
 
 ### Status Display Format Swap
 - Git's `git status --porcelain` returns XY format (X=staged, Y=unstaged)
@@ -35,8 +35,8 @@
 - Also applied in `commands/commit.sh` for fzf display
 
 ### Auto-Status
-- All commands that modify state show `wt status` after success
-- Pattern: `source "${WT_ROOT}/commands/status.sh" && cmd_status`
+- All commands that modify state show `ww status` after success
+- Pattern: `source "${WW_ROOT}/commands/status.sh" && cmd_status`
 - Commands: assign, unassign, commit, uncommit, apply, unapply, push, pr, sync, create
 
 ### fzf Integration
@@ -45,14 +45,14 @@
 - Vim keybindings: Ctrl+j/k (up/down), Ctrl+d/u (page down/up)
 - TAB to select/deselect files, ENTER to confirm
 - Pattern in assign and commit commands
-- `wt commit` marks staged files with [S] indicator
+- `ww commit` marks staged files with [S] indicator
 - Directory selection supported with "DIR" prefix
 
 ## File Structure
 
 ### Core Files
-- `bin/wt` - Main entry point, routes to commands
-- `lib/wt-lib.sh` - Core functions, metadata management
+- `bin/ww` - Main entry point, routes to commands
+- `lib/ww-lib.sh` - Core functions, metadata management
 - `lib/abbreviations.sh` - **REMOVED** (was gutted in Jan 2026, no longer needed)
 - `commands/*.sh` - All command implementations
 
@@ -65,13 +65,13 @@
 - `assign.sh` - Auto-creates worktrees, fzf selection, handles deleted files
 - `unassign.sh` - Uses patches to restore files (not git revert), avoids conflicts
 - `create.sh` - Simplified to single argument (branch name = worktree name)
-- `update.sh` - Merges main into wt-working, auto-cleans merged branches
+- `update.sh` - Merges main into ww-working, auto-cleans merged branches
 - `commit.sh` - Always uses fzf with [S] indicator for staged files, message pre-fill support
 
 ## Status Indicators
 
 ### Applied Status (lines 180-207 in status.sh)
-- Uses `git patch-id` to detect if commits in worktree exist in wt-working
+- Uses `git patch-id` to detect if commits in worktree exist in ww-working
 - `[applied]` = all commits cherry-picked
 - `[not applied]` = some commits not yet in staging
 - **Note**: Only shows when there are commits to potentially apply
@@ -94,7 +94,7 @@
 
 ### Optional but Enhanced
 - `fzf` - Interactive file selection (required for interactive mode)
-- `gh` (GitHub CLI) - PR creation, PR status in `wt status`
+- `gh` (GitHub CLI) - PR creation, PR status in `ww status`
 
 ## Testing
 
@@ -151,7 +151,7 @@ fi
 ## What NOT to Do
 
 1. **Don't bring back abbreviations** - Tried hash-based and sequential systems, both were too complex
-2. **Don't change argument order** - `wt assign <worktree> <file>` is settled
+2. **Don't change argument order** - `ww assign <worktree> <file>` is settled
 3. **Don't skip auto-status** - Users expect to see status after changes
 4. **Don't use XY format for display** - Always swap to YX for visual progression
 5. **Don't require fzf** - Commands should work with explicit file arguments too
@@ -161,20 +161,20 @@ fi
 
 - Swapped file status display to YX format in status.sh, commit.sh
 - Removed abbreviations.sh entirely and all `get_filepath_from_abbrev` calls
-- **Removed wt stage and wt unstage commands** - simplified workflow uses only wt commit
-- Refactored wt commit to always use fzf with [S] indicator for staged files
-- wt commit now pre-fills message prompt if message provided via command line
+- **Removed ww stage and ww unstage commands** - simplified workflow uses only ww commit
+- Refactored ww commit to always use fzf with [S] indicator for staged files
+- ww commit now pre-fills message prompt if message provided via command line
 - Fixed merge conflict in unstage.sh (removed old abbreviation code)
-- Refactored wt unassign to use patches instead of git revert (avoids conflicts)
-- Fixed wt assign to handle deleted files properly
+- Refactored ww unassign to use patches instead of git revert (avoids conflicts)
+- Fixed ww assign to handle deleted files properly
 - Added directory selection to fzf in all commands
-- Fixed applied/not applied indicator to check for assignment commits in wt-working
-- Removed redundant branch display from wt status (show name only)
+- Fixed applied/not applied indicator to check for assignment commits in ww-working
+- Removed redundant branch display from ww status (show name only)
 - Test suite needs updating for simplified commands
 
 ## Known Issues / TODO
 
-- Test suite needs updates for recent changes (wt create simplified, abbreviations removed)
+- Test suite needs updates for recent changes (ww create simplified, abbreviations removed)
 - Need to add directory selection to fzf (allow selecting entire directories)
 - Applied/not applied indicator concept needs clarification with user
 

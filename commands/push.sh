@@ -3,7 +3,7 @@
 
 show_help() {
   cat <<EOF
-Usage: wt push [worktree]
+Usage: ww push [worktree]
 
 Push the worktree's branch to the remote repository.
 Sets upstream if not already configured.
@@ -16,8 +16,8 @@ Options:
   -h, --help    Show this help message
 
 Examples:
-  wt push                # Select worktree interactively
-  wt push feature-auth   # Push specific worktree
+  ww push                # Select worktree interactively
+  ww push feature-auth   # Push specific worktree
 EOF
 }
 
@@ -100,7 +100,7 @@ cmd_push() {
 
     popd > /dev/null 2>&1
     echo ""
-    source "${WT_ROOT}/commands/status.sh"
+    source "${WW_ROOT}/commands/status.sh"
     cmd_status
   else
     error "Failed to enter worktree directory"

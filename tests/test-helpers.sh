@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Test helper functions for wt test suite
+# Test helper functions for ww test suite
 
 # Colors for test output
 readonly TEST_RED='\033[0;31m'
@@ -13,12 +13,12 @@ TEST_COUNT=0
 TEST_PASSED=0
 TEST_FAILED=0
 
-# Get the root directory of the wt project
-WT_PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-export WT_BIN="${WT_PROJECT_ROOT}/bin/wt"
+# Get the root directory of the ww project
+WW_PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export WW_BIN="${WW_PROJECT_ROOT}/bin/ww"
 
 # Test repository paths
-TEST_REPOS_DIR="${WT_PROJECT_ROOT}/test-repos"
+TEST_REPOS_DIR="${WW_PROJECT_ROOT}/test-repos"
 
 # Setup test environment
 setup_test_env() {

@@ -1,27 +1,27 @@
-# Development Guide for wt
+# Development Guide for ww
 
-This document describes the architecture, design decisions, and development workflow for the wt (worktree workflow manager) project.
+This document describes the architecture, design decisions, and development workflow for the ww (worktree workflow manager) project.
 
 ## Architecture Overview
 
 ### Core Concept
 
-`wt` is a bash-based CLI tool that provides a GitButler-like workflow using native git worktrees. The key innovation is the `wt-working` branch, which serves as a safe staging area isolated from `main`.
+`ww` is a bash-based CLI tool that provides a GitButler-like workflow using native git worktrees. The key innovation is the `ww-working` branch, which serves as a safe staging area isolated from `main`.
 
 ### Workflow Flow
 
-1. User works in `wt-working` branch
-2. Files are assigned to worktrees (committed to `wt-working`, copied to worktree)
+1. User works in `ww-working` branch
+2. Files are assigned to worktrees (committed to `ww-working`, copied to worktree)
 3. Changes are committed in worktrees on their feature branches
 4. Feature branches are pushed and merged to `main` via PRs
-5. `wt-working` is synced with `main` to get latest changes
+5. `ww-working` is synced with `main` to get latest changes
 
 ## Project Structure
 
 ```
-~/Code/wt/
+~/Code/ww/
 ├── bin/
-│   └── wt                      # Main dispatcher with command routing
+│   └── ww                      # Main dispatcher with command routing
 ├── commands/
 │   ├── init.sh                 # Initialize workflow
 │   ├── status.sh               # Show status with abbreviations
@@ -39,7 +39,7 @@ This document describes the architecture, design decisions, and development work
 │   ├── list.sh                 # List worktrees
 │   └── remove.sh               # Remove worktree
 ├── lib/
-│   ├── wt-lib.sh              # Shared utility functions
+│   ├── ww-lib.sh              # Shared utility functions
 │   └── abbreviations.sh        # Two-letter abbreviation system
 ├── tests/
 │   ├── test-helpers.sh         # Test utilities
@@ -60,12 +60,12 @@ Per-repository metadata (gitignored):
 
 ## Key Components
 
-### 1. Main Dispatcher (`bin/wt`)
+### 1. Main Dispatcher (`bin/ww`)
 
 **Responsibilities:**
 - Parse command-line arguments
 - Route to appropriate command script
-- Support abbreviated commands (e.g., `wt as` → `wt assign`)
+- Support abbreviated commands (e.g., `ww as` → `ww assign`)
 
 **Abbreviated Command Logic:**
 - Exact match takes precedence
@@ -78,7 +78,7 @@ Per-repository metadata (gitignored):
 **Convention:**
 - Each command is a separate `.sh` file
 - Must define a `cmd_<command_name>` function
-- Source `wt-lib.sh` and `abbreviations.sh` automatically via dispatcher
+- Source `ww-lib.sh` and `abbreviations.sh` automatically via dispatcher
 - Should include `show_help()` function for `--help`
 
 **Template for new commands:**
@@ -88,7 +88,7 @@ Per-repository metadata (gitignored):
 
 show_help() {
   cat <<EOF
-Usage: wt <command> <args>
+Usage: ww <command> <args>
 
 Description of what this command does.
 
@@ -123,11 +123,11 @@ cmd_<command_name>() {
 }
 ```
 
-### 3. Shared Library (`lib/wt-lib.sh`)
+### 3. Shared Library (`lib/ww-lib.sh`)
 
 **Key Functions:**
 - `ensure_git_repo()` - Verify we're in a git repo
-- `ensure_initialized()` - Verify wt is initialized
+- `ensure_initialized()` - Verify ww is initialized
 - `get_repo_root()` - Get repository root path
 - `read_metadata()` / `write_metadata()` - JSON metadata operations
 - `worktree_exists()` - Check if worktree exists
@@ -184,15 +184,15 @@ cmd_<command_name>() {
 
 ## Design Decisions
 
-### 1. Why `wt-working` Branch?
+### 1. Why `ww-working` Branch?
 
 **Problem:** Working directly in `main` is risky - experimental work can pollute the main branch.
 
-**Solution:** Dedicated `wt-working` branch provides:
+**Solution:** Dedicated `ww-working` branch provides:
 - Safe experimentation without affecting `main`
 - Clear separation between "staging work" and "production code"
 - Ability to reset/rebase staging without affecting `main`
-- Explicit update step (`wt update`) to pull changes from `main`
+- Explicit update step (`ww update`) to pull changes from `main`
 
 ### 2. Why Commit on Assign?
 
@@ -200,10 +200,10 @@ cmd_<command_name>() {
 
 **Issue:** This caused inconsistency - files would be "unassigned" but also in worktrees.
 
-**Solution:** Commit to `wt-working` when assigning:
+**Solution:** Commit to `ww-working` when assigning:
 - Files are removed from "unassigned" list
 - Changes are tracked in git history
-- Can be reverted with `wt unassign`
+- Can be reverted with `ww unassign`
 - Worktree gets clean copy to work with
 
 ### 3. Why Two-Letter Abbreviations?
@@ -211,7 +211,7 @@ cmd_<command_name>() {
 **Problem:** Typing full paths is tedious.
 
 **Solution:** GitButler-style abbreviations:
-- Fast to type (`wt assign ab feature-x`)
+- Fast to type (`ww assign ab feature-x`)
 - Deterministic (same file = same abbreviation)
 - Collision handling ensures uniqueness
 - Cached for consistency
@@ -247,7 +247,7 @@ cmd_<command_name>() {
 
 2. **Implement using template** (see section 2 above)
 
-3. **Add to dispatcher help** (`bin/wt` - `show_usage()`)
+3. **Add to dispatcher help** (`bin/ww` - `show_usage()`)
 
 4. **Write tests** (`tests/test-all.sh`)
 
@@ -255,7 +255,7 @@ cmd_<command_name>() {
 
 6. **Test:**
    ```bash
-   ./bin/wt newcommand --help
+   ./bin/ww newcommand --help
    ./run-tests.sh
    ```
 
@@ -284,10 +284,10 @@ REPO=$(create_test_repo "test-name")
 cd "$REPO"
 
 # Setup
-$WT_BIN init > /dev/null 2>&1
+$WW_BIN init > /dev/null 2>&1
 
 # Test
-assert_success "$WT_BIN newcommand arg" "Should succeed"
+assert_success "$WW_BIN newcommand arg" "Should succeed"
 assert_file_exists ".some-file" "File should exist"
 assert_contains "$(cat .some-file)" "expected" "Should contain text"
 ```
@@ -392,7 +392,7 @@ write_metadata "$metadata"
 ### Enable Bash Debugging
 
 ```bash
-bash -x ./bin/wt status
+bash -x ./bin/ww status
 ```
 
 ### Check Metadata
@@ -439,7 +439,7 @@ Potential improvements:
 
 1. Verify JSON is valid: `jq . .worktree-flow/metadata.json`
 2. Check write permissions on `.worktree-flow/`
-3. Delete and reinitialize: `rm -rf .worktree-flow && wt init`
+3. Delete and reinitialize: `rm -rf .worktree-flow && ww init`
 
 ## Contributing
 

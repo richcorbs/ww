@@ -3,9 +3,9 @@
 
 show_help() {
   cat <<EOF
-Usage: wt unassign [worktree] [file|.]
+Usage: ww unassign [worktree] [file|.]
 
-Unassign file(s) from a worktree by reverting their commits in wt-working
+Unassign file(s) from a worktree by reverting their commits in ww-working
 and removing the changes from the worktree. The files will show up as
 "unassigned" again.
 
@@ -21,10 +21,10 @@ Options:
   -h, --help    Show this help message
 
 Examples:
-  wt unassign                                 # Select worktree and file interactively
-  wt unassign feature-auth                    # Select file from feature-auth
-  wt unassign feature-auth app/models/user.rb # Single file by path
-  wt unassign feature-auth .                  # All files assigned to the worktree
+  ww unassign                                 # Select worktree and file interactively
+  ww unassign feature-auth                    # Select file from feature-auth
+  ww unassign feature-auth app/models/user.rb # Single file by path
+  ww unassign feature-auth .                  # All files assigned to the worktree
 EOF
 }
 
@@ -56,11 +56,11 @@ cmd_unassign() {
   ensure_git_repo
   ensure_initialized
 
-  # Ensure on wt-working
+  # Ensure on ww-working
   local current_branch
   current_branch=$(git branch --show-current)
-  if [[ "$current_branch" != "${WT_BRANCH}" ]]; then
-    error "Must be on ${WT_BRANCH} branch to unassign. Current branch: ${current_branch}"
+  if [[ "$current_branch" != "${WW_BRANCH}" ]]; then
+    error "Must be on ${WW_BRANCH} branch to unassign. Current branch: ${current_branch}"
   fi
 
   # Validate arguments - use fzf if worktree not provided
@@ -89,9 +89,9 @@ cmd_unassign() {
     fi
   fi
 
-  # Check for unassigned changes in wt-working
+  # Check for unassigned changes in ww-working
   if ! git diff-index --quiet HEAD --; then
-    error "Cannot unassign: wt-working has unassigned changes. Assign them first."
+    error "Cannot unassign: ww-working has unassigned changes. Assign them first."
   fi
 
   # Check if unassigning all files
@@ -105,7 +105,7 @@ cmd_unassign() {
       local msg
       msg=$(git log -1 --format="%s" "$sha")
 
-      if [[ "$msg" =~ ^wt:\ assign\ (.*)\ to\ ${worktree_name}$ ]]; then
+      if [[ "$msg" =~ ^ww:\ assign\ (.*)\ to\ ${worktree_name}$ ]]; then
         local filepath="${BASH_REMATCH[1]}"
         files_to_restore+=("$filepath:$sha")
       fi
@@ -138,9 +138,9 @@ cmd_unassign() {
     done
 
     success "Unassigned all files from '${worktree_name}'"
-    info "Files are now unassigned in wt-working"
+    info "Files are now unassigned in ww-working"
     echo ""
-    source "${WT_ROOT}/commands/status.sh"
+    source "${WW_ROOT}/commands/status.sh"
     cmd_status
     exit 0
   fi
@@ -190,7 +190,7 @@ cmd_unassign() {
 
   if true; then
     success "Unassigned '${filepath}' from '${worktree_name}'"
-    info "File is now uncommitted in wt-working"
+    info "File is now uncommitted in ww-working"
 
     # Try to remove from worktree (best effort)
     local repo_root
@@ -211,7 +211,7 @@ cmd_unassign() {
       fi
     fi
     echo ""
-    source "${WT_ROOT}/commands/status.sh"
+    source "${WW_ROOT}/commands/status.sh"
     cmd_status
   else
     error "Failed to revert commit. There may be conflicts."

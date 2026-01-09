@@ -3,7 +3,7 @@
 
 show_help() {
   cat <<EOF
-Usage: wt commit [worktree] [message]
+Usage: ww commit [worktree] [message]
 
 Commit changes in a worktree using interactive file selection.
 Always opens fzf to select files to commit. Staged files are marked with [S].
@@ -17,9 +17,9 @@ Options:
   -h, --help    Show this help message
 
 Examples:
-  wt commit                                          # Select worktree, then files, then message
-  wt commit feature-auth "Add user authentication"  # Selects files, pre-fills message
-  wt commit feature-auth                             # Selects files, prompts for message
+  ww commit                                          # Select worktree, then files, then message
+  ww commit feature-auth "Add user authentication"  # Selects files, pre-fills message
+  ww commit feature-auth                             # Selects files, prompts for message
 EOF
 }
 
@@ -90,7 +90,7 @@ cmd_commit() {
     # Always use fzf for file selection
     if ! command -v fzf > /dev/null 2>&1; then
       popd > /dev/null 2>&1
-      error "fzf is required for interactive file selection. Install fzf to use wt commit."
+      error "fzf is required for interactive file selection. Install fzf to use ww commit."
     fi
 
     # Get uncommitted files
@@ -219,7 +219,7 @@ cmd_commit() {
       info "Commit: ${short_sha}"
       info "Message: ${commit_message}"
       echo ""
-      source "${WT_ROOT}/commands/status.sh"
+      source "${WW_ROOT}/commands/status.sh"
       cmd_status
     else
       popd > /dev/null 2>&1

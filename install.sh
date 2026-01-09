@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installation script for wt (worktree workflow manager)
+# Installation script for ww (worktree workflow manager)
 
 set -euo pipefail
 
@@ -69,7 +69,7 @@ fi
 
 if ! command -v gh &> /dev/null; then
   warn "gh (GitHub CLI) is not installed (optional)"
-  info "gh enables PR links in status and 'wt pr' command"
+  info "gh enables PR links in status and 'ww pr' command"
   info ""
   info "Install gh with:"
   info "  macOS:   brew install gh"
@@ -112,8 +112,8 @@ fi
 # Create symlink
 info "Creating symlink..."
 
-if [[ -L "${INSTALL_DIR}/wt" ]] || [[ -f "${INSTALL_DIR}/wt" ]]; then
-  warn "${INSTALL_DIR}/wt already exists"
+if [[ -L "${INSTALL_DIR}/ww" ]] || [[ -f "${INSTALL_DIR}/ww" ]]; then
+  warn "${INSTALL_DIR}/ww already exists"
 
   read -rp "Overwrite? (y/N) " response
   if [[ ! "$response" =~ ^[Yy]$ ]]; then
@@ -121,25 +121,25 @@ if [[ -L "${INSTALL_DIR}/wt" ]] || [[ -f "${INSTALL_DIR}/wt" ]]; then
     exit 0
   fi
 
-  rm -f "${INSTALL_DIR}/wt"
+  rm -f "${INSTALL_DIR}/ww"
 fi
 
-ln -s "${BIN_DIR}/wt" "${INSTALL_DIR}/wt"
+ln -s "${BIN_DIR}/ww" "${INSTALL_DIR}/ww"
 
-success "Symlink created: ${INSTALL_DIR}/wt -> ${BIN_DIR}/wt"
+success "Symlink created: ${INSTALL_DIR}/ww -> ${BIN_DIR}/ww"
 
 # Verify installation
 info ""
 info "Verifying installation..."
 
-if command -v wt &> /dev/null; then
+if command -v ww &> /dev/null; then
   success "Installation successful!"
   echo ""
   info "Try running:"
-  info "  wt --help"
+  info "  ww --help"
   echo ""
   info "To get started in a git repository:"
-  info "  wt init"
+  info "  ww init"
 else
-  error "Installation failed. wt command not found in PATH."
+  error "Installation failed. ww command not found in PATH."
 fi

@@ -3,7 +3,7 @@
 
 show_help() {
   cat <<EOF
-Usage: wt status
+Usage: ww status
 
 Show uncommitted changes in staging with two-letter abbreviations,
 and display all worktrees with their status.
@@ -34,7 +34,7 @@ cmd_status() {
   # Auto-initialize if not already done
   if ! is_initialized; then
     warn "Worktree workflow not initialized. Initializing now..."
-    cmd_init() { source "${WT_ROOT}/commands/init.sh" && cmd_init; }
+    cmd_init() { source "${WW_ROOT}/commands/init.sh" && cmd_init; }
     cmd_init
     echo ""
   fi
@@ -48,16 +48,16 @@ cmd_status() {
   local current_branch
   current_branch=$(git branch --show-current)
 
-  # Check if wt-working is behind main
+  # Check if ww-working is behind main
   local behind_status=""
-  if [[ "$current_branch" == "wt-working" ]] && git remote get-url origin > /dev/null 2>&1; then
+  if [[ "$current_branch" == "ww-working" ]] && git remote get-url origin > /dev/null 2>&1; then
     # Determine main branch name
     local main_branch
     main_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo "main")
 
     # Check if origin/main exists
     if git show-ref --verify --quiet "refs/remotes/origin/${main_branch}"; then
-      # Compare wt-working with origin/main
+      # Compare ww-working with origin/main
       local behind_count
       behind_count=$(git rev-list --count HEAD..origin/${main_branch} 2>/dev/null || echo "0")
 
@@ -70,10 +70,10 @@ cmd_status() {
   echo -e "  Working in: ${current_branch}${behind_status}"
   echo ""
 
-  # Check if on wt-working branch
-  if [[ "$current_branch" != "wt-working" ]]; then
-    warn "Not on wt-working branch (currently on: ${current_branch})"
-    info "Use 'git checkout wt-working' to switch"
+  # Check if on ww-working branch
+  if [[ "$current_branch" != "ww-working" ]]; then
+    warn "Not on ww-working branch (currently on: ${current_branch})"
+    info "Use 'git checkout ww-working' to switch"
     echo ""
   fi
 
@@ -118,7 +118,7 @@ cmd_status() {
     echo "  Worktrees:"
     echo "    (none)"
     echo ""
-    info "  Use 'wt create <branch>' to create a worktree"
+    info "  Use 'ww create <branch>' to create a worktree"
   else
     echo "  Worktrees:"
 
@@ -161,15 +161,15 @@ cmd_status() {
         fi
       fi
 
-      # Count commits not in wt-working
+      # Count commits not in ww-working
       local commit_count
       commit_count=$(get_worktree_commit_count "$abs_path")
 
-      # Check if this worktree's changes are in wt-working
-      # Look for assignment commits for this worktree in wt-working
+      # Check if this worktree's changes are in ww-working
+      # Look for assignment commits for this worktree in ww-working
       local applied_status=""
       local assignment_commits
-      assignment_commits=$(git log wt-working --oneline --grep="wt: assign .* to ${name}" --max-count=50 2>/dev/null || echo "")
+      assignment_commits=$(git log ww-working --oneline --grep="ww: assign .* to ${name}" --max-count=50 2>/dev/null || echo "")
 
       if [[ -n "$assignment_commits" ]]; then
         # Found assignment commits - worktree is applied to staging
@@ -178,15 +178,15 @@ cmd_status() {
         # No assignment commits but has commits - check if commits are in staging via patch-id
         local unapplied_count=0
         if pushd "$abs_path" > /dev/null 2>&1; then
-          # Get patch-ids of commits in worktree but not in wt-working
+          # Get patch-ids of commits in worktree but not in ww-working
           local worktree_patches
-          worktree_patches=$(git log --format='%H' wt-working..HEAD 2>/dev/null | while read commit; do git show "$commit" | git patch-id --stable 2>/dev/null | awk '{print $1}'; done)
+          worktree_patches=$(git log --format='%H' ww-working..HEAD 2>/dev/null | while read commit; do git show "$commit" | git patch-id --stable 2>/dev/null | awk '{print $1}'; done)
 
           if [[ -n "$worktree_patches" ]]; then
-            # Check each patch to see if it exists in wt-working
+            # Check each patch to see if it exists in ww-working
             while IFS= read -r patch_id; do
-              # Search wt-working for this patch-id
-              if ! git log --format='%H' wt-working --max-count=100 2>/dev/null | while read staging_commit; do git show "$staging_commit" | git patch-id --stable 2>/dev/null | awk '{print $1}'; done | grep -q "^${patch_id}$"; then
+              # Search ww-working for this patch-id
+              if ! git log --format='%H' ww-working --max-count=100 2>/dev/null | while read staging_commit; do git show "$staging_commit" | git patch-id --stable 2>/dev/null | awk '{print $1}'; done | grep -q "^${patch_id}$"; then
                 unapplied_count=$((unapplied_count + 1))
               fi
             done <<< "$worktree_patches"

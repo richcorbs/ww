@@ -3,17 +3,17 @@
 
 show_help() {
   cat <<EOF
-Usage: wt fetch
+Usage: ww fetch
 
 Fetch latest changes from the remote repository.
 This updates your remote tracking branches (like origin/main) which allows
-wt status to accurately show which worktree branches have been merged.
+ww status to accurately show which worktree branches have been merged.
 
 Options:
   -h, --help    Show this help message
 
 Example:
-  wt fetch
+  ww fetch
 EOF
 }
 

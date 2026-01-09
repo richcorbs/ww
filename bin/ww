@@ -12,24 +12,24 @@ while [ -L "$SCRIPT_PATH" ]; do
   [[ $SCRIPT_PATH != /* ]] && SCRIPT_PATH="$SCRIPT_DIR/$SCRIPT_PATH"
 done
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
-WT_ROOT="$(dirname "$SCRIPT_DIR")"
+WW_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # Source shared libraries
-# shellcheck source=../lib/wt-lib.sh
-source "${WT_ROOT}/lib/wt-lib.sh"
+# shellcheck source=../lib/ww-lib.sh
+source "${WW_ROOT}/lib/ww-lib.sh"
 
 # Show usage
 show_usage() {
   cat <<EOF
-wt - Worktree workflow manager
+ww - Worktree Workflow manager
 
-Usage: wt <command> [options]
+Usage: ww <command> [options]
 
 Commands:
   init              Initialize worktree workflow in current repository
   status            Show uncommitted changes and worktree status
   fetch             Fetch latest changes from origin
-  switch            Switch between worktree-staging and main
+  switch            Switch between ww-working and main
   create            Create a new worktree
   list              List all worktrees
   assign            Assign a file to a worktree
@@ -40,10 +40,10 @@ Commands:
   unapply           Unapply worktree commits from staging
   push              Push a worktree branch to remote
   pr                Open GitHub PR creation page for a worktree
-  sync              Sync worktree-staging with main
+  update            Update ww-working with main
   remove            Remove a worktree
 
-Run 'wt <command> --help' for more information on a command.
+Run 'ww <command> --help' for more information on a command.
 EOF
 }
 
@@ -54,7 +54,7 @@ find_command() {
   local match_count=0
 
   # Get all available commands
-  for cmd_file in "${WT_ROOT}/commands"/*.sh; do
+  for cmd_file in "${WW_ROOT}/commands"/*.sh; do
     local cmd_name
     cmd_name=$(basename "$cmd_file" .sh)
 
@@ -104,7 +104,7 @@ main() {
     exit 1
   fi
 
-  local command_script="${WT_ROOT}/commands/${command}.sh"
+  local command_script="${WW_ROOT}/commands/${command}.sh"
 
   if [[ ! -f "$command_script" ]]; then
     echo "Error: Command file not found for '$command'" >&2

@@ -3,7 +3,7 @@
 
 show_help() {
   cat <<EOF
-Usage: wt remove <worktree> [--force]
+Usage: ww remove <worktree> [--force]
 
 Remove a worktree and clean up metadata.
 Warns if the branch has unpushed commits unless --force is used.
@@ -16,8 +16,8 @@ Options:
   -h, --help    Show this help message
 
 Example:
-  wt remove feature-auth
-  wt remove feature-auth --force
+  ww remove feature-auth
+  ww remove feature-auth --force
 EOF
 }
 
