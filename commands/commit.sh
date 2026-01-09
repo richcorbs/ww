@@ -153,7 +153,7 @@ cmd_commit() {
     info "Select files to commit (TAB to select, ENTER to confirm)..."
 
     local selected_files
-    selected_files=$(echo "$file_list" | run_fzf "Select files for commit" | sed 's/^..  //' | sed 's/ \[S\]$//')
+    selected_files=$(echo "$file_list" | run_fzf "Search files: " | sed 's/^..  //' | sed 's/ \[S\]$//')
 
     if [[ -z "$selected_files" ]]; then
       popd > /dev/null 2>&1

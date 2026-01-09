@@ -34,6 +34,7 @@ Commands:
   list              List all worktrees
   assign            Assign a file to a worktree
   unassign          Unassign a file from a worktree
+  diff              Review diffs in a worktree (with stage/unstage toggle)
   commit            Commit changes in a worktree (with interactive file selection)
   uncommit          Uncommit last commit in a worktree
   apply             Apply worktree commits to staging

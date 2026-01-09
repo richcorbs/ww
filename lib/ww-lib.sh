@@ -413,7 +413,7 @@ validate_git_output() {
 # Usage: run_fzf "prompt text" <<< "$file_list"
 run_fzf() {
   local prompt="$1"
-  fzf $FZF_OPTS --prompt="${prompt}> "
+  fzf $FZF_OPTS --prompt="${prompt}"
 }
 
 # Get a summary line for a worktree (for fzf display)
@@ -532,7 +532,7 @@ select_worktree_interactive() {
   done <<< "$names"
 
   # Run fzf and extract just the worktree name (first field)
-  echo "$worktree_list" | run_fzf "Select worktree" | awk '{print $1}'
+  echo "$worktree_list" | run_fzf "Search worktrees: " | awk '{print $1}'
 }
 
 # Select an assigned file from a worktree interactively with fzf
@@ -571,5 +571,5 @@ select_assigned_file_interactive() {
   fi
 
   # Show files in fzf
-  echo "$assigned_files" | run_fzf "Select file to unassign"
+  echo "$assigned_files" | run_fzf "Search files: "
 }
