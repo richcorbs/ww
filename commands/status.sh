@@ -146,19 +146,24 @@ cmd_status() {
         continue
       fi
 
-      # Get uncommitted files and commit count
+      # Get uncommitted files, staged count, and total count
       local uncommitted_files=()
-      local uncommitted_count
-      uncommitted_count=$(get_worktree_uncommitted_count "$abs_path")
+      local total_count=0
+      local staged_count=0
 
-      # Get list of uncommitted files with status
-      if [[ "$uncommitted_count" -gt 0 ]]; then
-        if pushd "$abs_path" > /dev/null 2>&1; then
-          while IFS= read -r line; do
-            uncommitted_files+=("$line")
-          done < <(git status --porcelain 2>/dev/null)
-          popd > /dev/null 2>&1
-        fi
+      # Get list of uncommitted files with status and count total/staged
+      if pushd "$abs_path" > /dev/null 2>&1; then
+        while IFS= read -r line; do
+          [[ -z "$line" ]] && continue
+          uncommitted_files+=("$line")
+          total_count=$((total_count + 1))
+          local X="${line:0:1}"
+          # Count staged (X != ' ' and X != '?')
+          if [[ "$X" != " " ]] && [[ "$X" != "?" ]]; then
+            staged_count=$((staged_count + 1))
+          fi
+        done < <(git status --porcelain 2>/dev/null)
+        popd > /dev/null 2>&1
       fi
 
       # Count commits not in ww-working
@@ -235,8 +240,10 @@ cmd_status() {
       fi
 
       local status_parts=()
-      if [[ "$uncommitted_count" -gt 0 ]]; then
-        status_parts+=("${uncommitted_count} uncommitted")
+      # Show total files and staged counts
+      if [[ "$total_count" -gt 0 ]]; then
+        local change_str="${total_count} files • ${staged_count} staged"
+        status_parts+=("$change_str")
       fi
       if [[ "$commit_count" -gt 0 ]]; then
         status_parts+=("${commit_count} commit(s)")
